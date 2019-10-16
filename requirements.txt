@@ -1,0 +1,25 @@
+boto3==1.9.250
+botocore==1.12.250
+certifi==2019.9.11
+chardet==3.0.4
+Click==7.0
+docutils==0.15.2
+idna==2.8
+jmespath==0.9.4
+joblib==0.14.0
+numpy==1.17.2
+Pillow==6.2.0
+python-dateutil==2.8.0
+regex==2019.8.19
+requests==2.22.0
+s3transfer==0.2.1
+sacremoses==0.0.35
+sentencepiece==0.1.83
+six==1.12.0
+torch==1.2.0+cu92; platform_system == "Windows"
+torchvision==0.4.1+cu92; platform_system == "Windows"
+torch==1.2.0; platform_system == "Darwin"
+torchvision==0.4.1; platform_system == "Darwin"
+tqdm==4.36.1
+transformers==2.1.1
+urllib3==1.25.6
