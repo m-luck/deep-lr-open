@@ -8,9 +8,13 @@ from utils import zones
 
 def download(base_dir):
     for speaker in range(1, 35):
-        print("Downloading speaker {}".format(speaker))
         if speaker == 21:
             continue
+
+        if os.path.isdir(zones.get_grid_video_speaker_part_dir(base_dir=base_dir, speaker=speaker, part=2)):
+            continue
+
+        print("Downloading speaker {}".format(speaker))
 
         for part in (1, 2,):
             vid_url = _get_video_url(speaker, part)
