@@ -31,6 +31,8 @@ with torch.no_grad():
     predictions = outputs[0]
 
 # get the predicted next sub-word 
-predicted_index = torch.argmax(predictions[0, -1, :]).item()
-predicted_text = tokenizer.decode(indexed_tokens + [predicted_index])
-print(predicted_text)
+for index in range(0,10):
+    predicted_index = torch.argmax(predictions[0, -index, :]).item()
+    predicted_text = tokenizer.decode(indexed_tokens + [predicted_index])
+    print(predicted_text)
+
