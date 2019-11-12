@@ -1,9 +1,11 @@
+import multiprocessing
 import os
 
 import numpy as np
 import dlib
 from skimage.transform import resize
 from skimage.io import imsave
+import skimage.util
 from utils import zones
 
 MOUTH_WIDTH = 100
@@ -66,11 +68,24 @@ def _get_mouth_frames(frames, face_detector, face_predictor):
     return mouth_frames
 
 
-def save_mouth_images(args):
-
+def _convert_and_save(args, video_file_path: str, output_dir: str):
     face_detector = dlib.get_frontal_face_detector()
     face_predictor = dlib.shape_predictor(zones.get_dlib_face_predictor_path(base_dir=args.base_dir))
 
+    frames = _get_video_frames(args, video_file_path)
+    mouth_frames = _get_mouth_frames(frames, face_detector, face_predictor)
+
+    os.makedirs(output_dir, exist_ok=True)
+    for i, mouth_frame in enumerate(mouth_frames):
+        mouth_frame = skimage.util.img_as_ubyte(mouth_frame)
+        file_path = os.path.join(output_dir, "{}.png".format(i))
+        imsave(file_path, mouth_frame)
+
+    print("Finished {}".format(video_file_path))
+
+
+def save_mouth_images(args):
+    conversions = []
     for speaker in range(1, 35):
         if speaker == 21:
             continue
@@ -79,17 +94,14 @@ def save_mouth_images(args):
 
             for file_name in os.listdir(video_dir):
                 print("Converting Speaker: {} Part: {} Video: {}".format(speaker, part, file_name))
-                vid_file_path = os.path.join(video_dir, file_name)
+                video_file_path = os.path.join(video_dir, file_name)
                 sentence_id = os.path.splitext(file_name)[0]
                 output_dir = os.path.join(zones.get_grid_image_speaker_dir(args.base_dir, speaker=speaker), sentence_id)
-
-                if os.path.isdir(output_dir):
+                if os.path.isdir(output_dir) and len(os.listdir(output_dir)) == 75:
                     continue
 
-                frames = _get_video_frames(args, vid_file_path)
-                mouth_frames = _get_mouth_frames(frames, face_detector, face_predictor)
+                conversions.append((args, video_file_path, output_dir,))
 
-                os.makedirs(output_dir)
-                for i, mouth_frame in enumerate(mouth_frames):
-                    file_path = os.path.join(output_dir, "{}.png".format(i))
-                    imsave(file_path, mouth_frame)
+    with multiprocessing.Pool(processes=args.num_processes) as pool:
+        results = pool.starmap(_convert_and_save, conversions)
+    print("Done")

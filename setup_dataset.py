@@ -15,5 +15,7 @@ if __name__ == '__main__':
                         help='Base directory to the project data folder')
     parser.add_argument('--ffmpeg_bin_dir', metavar='D', type=str, required=True,
                         help='Bin directory holding ffmpeg')
+    parser.add_argument('--num_processes', type=int, required=False, default=5,
+                        help='Number of processes to spawn to convert videos to images')
     args = parser.parse_args()
     main(args)
