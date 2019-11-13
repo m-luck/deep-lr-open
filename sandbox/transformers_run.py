@@ -3,6 +3,8 @@ import torch
 import heapq
 from transformers import GPT2Tokenizer, GPT2LMHeadModel
 
+num_tokens_predict = 1
+
 # OPTIONAL: if we want to have more information on what's happening, activate the logger as follows
 import logging
 # logging.basicConfig(level=logging.INFO)
@@ -39,11 +41,14 @@ for i in range(0,10):
     heapq.heapify(val_ind_tuples)
 
     # get the predicted next sub-word 
-    for index in range(0,1):
+    for index in range(0,num_tokens_predict):
         predicted_index = heapq.heappop(val_ind_tuples)[1]
         predicted_text = tokenizer.decode(indexed_tokens + [predicted_index])
     text = ' '.join(predicted_text.strip('.,').split(' ')[1:])
-    print(predicted_text)
+    # print(predicted_text)
 
-print(predicted_text, "[ Token",predicted_index,"]")
+# print(predicted_text, "[ Token",predicted_index,"]")
+predicted_word = tokenizer.decode(predicted_index)
+
+print('|'.join(list(predicted_word)))
 

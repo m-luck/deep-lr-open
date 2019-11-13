@@ -1,4 +1,5 @@
-# deep-lr
+#
+deep-lr
 
 ### Project Abstract:
 
@@ -7,5 +8,7 @@ We are using neural networks to facilitate lip reading trained on the [GRID Corp
 ### TODO Timeline:
 
 1) Verify Lipnet, port to PyTorch
-2) Get GPT-2 on PyTorch
+[DONE] 2) Get GPT-2 on PyTorch
 3) Cat GPT-2 and Lipnet 
+
+LipNet in PyTorch for dev reference: https://towardsdatascience.com/understanding-bidirectional-rnn-in-pytorch-5bd25a5dd66 
