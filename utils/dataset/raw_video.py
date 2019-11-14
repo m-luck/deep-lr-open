@@ -72,7 +72,12 @@ def _convert_and_save(args, video_file_path: str, output_dir: str):
     face_detector = dlib.get_frontal_face_detector()
     face_predictor = dlib.shape_predictor(zones.get_dlib_face_predictor_path(base_dir=args.base_dir))
 
-    frames = _get_video_frames(args, video_file_path)
+    try:
+        frames = _get_video_frames(args, video_file_path)
+    except ValueError as e:
+        print(e)
+        print("Failed read {}".format(video_file_path))
+        return
     mouth_frames = _get_mouth_frames(frames, face_detector, face_predictor)
 
     os.makedirs(output_dir, exist_ok=True)
