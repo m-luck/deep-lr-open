@@ -18,7 +18,7 @@ from tensorboardX import SummaryWriter
 
 if(__name__ == '__main__'):
     opt = __import__('options')
-    os.environ['CUDA_VISIBLE_DEVICES'] = opt.gpu    
+    # os.environ['CUDA_VISIBLE_DEVICES'] = opt.gpu    
     writer = SummaryWriter()
 
 def dataset2dataloader(dataset, num_workers=opt.num_workers, shuffle=True):
@@ -58,10 +58,10 @@ def test(model, net):
         crit = nn.CTCLoss()
         tic = time.time()
         for (i_iter, input) in enumerate(loader):            
-            vid = input.get('vid').cuda()
-            txt = input.get('txt').cuda()
-            vid_len = input.get('vid_len').cuda()
-            txt_len = input.get('txt_len').cuda()
+            vid = input.get('vid')#.cuda()
+            txt = input.get('txt')#.cuda()
+            vid_len = input.get('vid_len')#.cuda()
+            txt_len = input.get('txt_len')#.cuda()
             
             y = net(vid)
             
@@ -110,10 +110,14 @@ def train(model, net):
     for epoch in range(opt.max_epoch):
         for (i_iter, input) in enumerate(loader):
             model.train()
-            vid = input.get('vid').cuda()
-            txt = input.get('txt').cuda()
-            vid_len = input.get('vid_len').cuda()
-            txt_len = input.get('txt_len').cuda()
+            # vid = input.get('vid').cuda()
+            # txt = input.get('txt').cuda()
+            # vid_len = input.get('vid_len').cuda()
+            # txt_len = input.get('txt_len').cuda()
+            vid = input.get('vid')
+            txt = input.get('txt')
+            vid_len = input.get('vid_len')
+            txt_len = input.get('txt_len')
             
             optimizer.zero_grad()
             y = net(vid)
@@ -162,11 +166,11 @@ def train(model, net):
 if(__name__ == '__main__'):
     print("Loading options...")
     model = LipNet()
-    model = model.cuda()
-    net = nn.DataParallel(model).cuda()
+#    model = model.cuda()
+    net = nn.DataParallel(model) #.cuda()
 
     if(hasattr(opt, 'weights')):
-        pretrained_dict = torch.load(opt.weights)
+        pretrained_dict = torch.load(opt.weights,  map_location=torch.device('cpu'))
         model_dict = model.state_dict()
         pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict.keys() and v.size() == model_dict[k].size()}
         missed_params = [k for k, v in model_dict.items() if not k in pretrained_dict.keys()]
@@ -176,6 +180,6 @@ if(__name__ == '__main__'):
         model.load_state_dict(model_dict)
         
     torch.manual_seed(opt.random_seed)
-    torch.cuda.manual_seed_all(opt.random_seed)
+#    torch.cuda.manual_seed_all(opt.random_seed)
     train(model, net)
         
