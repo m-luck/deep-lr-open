@@ -38,6 +38,8 @@ def predict_n_words(leading_text:str, num_tokens_predict=1):
         with torch.no_grad():
             outputs = model(tokens_tensor)
             predictions = outputs[0]
+        
+        print(predictions)
 
         val_ind_tuples = [(-pred.item(), i) for i, pred in enumerate(predictions[0,-1,:])]
 
