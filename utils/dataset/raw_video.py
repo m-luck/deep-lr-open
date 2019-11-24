@@ -103,15 +103,18 @@ def save_mouth_images(args):
             video_dir = zones.get_grid_video_speaker_part_dir(base_dir=args.base_dir, speaker=speaker, part=part)
 
             for file_name in os.listdir(video_dir):
-                print("Converting Speaker: {} Part: {} Video: {}".format(speaker, part, file_name))
                 video_file_path = os.path.join(video_dir, file_name)
                 sentence_id = os.path.splitext(file_name)[0]
                 output_dir = os.path.join(zones.get_grid_image_speaker_dir(args.base_dir, speaker=speaker), sentence_id)
-                if os.path.isdir(output_dir) and len(os.listdir(output_dir)) == 75:
+                if os.path.isdir(output_dir) and len(os.listdir(output_dir)) >= 74:
                     continue
 
                 conversions.append((args, video_file_path, output_dir,))
 
-    with multiprocessing.Pool(processes=args.num_processes) as pool:
-        results = pool.starmap(_convert_and_save, conversions)
+    if args.parallel:
+        with multiprocessing.Pool(processes=args.num_processes) as pool:
+            pool.starmap(_convert_and_save, conversions)
+    else:
+        for args, video_file_path, output_dir in conversions:
+            _convert_and_save(args, video_file_path, output_dir)
     print("Done")

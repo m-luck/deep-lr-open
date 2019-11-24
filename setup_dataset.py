@@ -17,5 +17,7 @@ if __name__ == '__main__':
                         help='Bin directory holding ffmpeg')
     parser.add_argument('--num_processes', type=int, required=False, default=5,
                         help='Number of processes to spawn to convert videos to images')
+    parser.add_argument('--parallel', required=False, default=False, action="store_true",
+                        help='Use multiprocessing')
     args = parser.parse_args()
     main(args)

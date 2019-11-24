@@ -1,11 +1,12 @@
 import argparse
 
-from lipnet.dataset import GridDataset
+import torch
+
+from lipnet.train import run
 
 
 def main(args):
-    dataset = GridDataset(args.base_dir)
-    print(dataset)
+    run(args.base_dir, False, batch_size=50, num_workers=5, target_device=torch.device("cuda"))
 
 
 if __name__ == '__main__':

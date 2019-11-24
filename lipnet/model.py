@@ -87,3 +87,7 @@ class LipNet(torch.nn.Module):
         x = self.FC(x)
         x = x.permute(1, 0, 2).contiguous()
         return x
+
+    @staticmethod
+    def load():
+        return LipNet()
