@@ -23,7 +23,7 @@ def run(base_dir: str, use_overlapped: bool, batch_size: int, num_workers: int, 
     model.to(target_device)
 
     optimizer = optim.Adam(model.parameters(),
-                           lr=2e-5,
+                           lr=1e-4,
                            weight_decay=0.,
                            amsgrad=True)
 

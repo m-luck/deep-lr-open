@@ -6,7 +6,7 @@ from lipnet.train import run
 
 
 def main(args):
-    run(args.base_dir, False, batch_size=50, num_workers=5, target_device=torch.device("cuda"))
+    run(args.base_dir, False, batch_size=50, num_workers=10, target_device=torch.device("cuda"))
 
 
 if __name__ == '__main__':

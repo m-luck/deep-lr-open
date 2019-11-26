@@ -140,9 +140,10 @@ class GridDataset(Dataset):
         prev_index = -1
         text = []
         for n in array:
-            if n < 0 or n >= len(GridDataset.LETTERS) or n == prev_index or GridDataset.LETTERS[n] == ' ':
+            if n < 0 or n >= len(GridDataset.LETTERS) or n == prev_index:
                 continue
-            text.append(GridDataset.LETTERS[n])
+            if not GridDataset.LETTERS[n] == ' ':
+                text.append(GridDataset.LETTERS[n])
             prev_index = n
         return ''.join(text)
 

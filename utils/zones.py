@@ -96,7 +96,8 @@ def get_model_latest_file_path(base_dir) -> Optional[str]:
     for file_name in os.listdir(model_dir):
         if not file_name.endswith(".pth"):
             continue
-        version = int(file_name.split("_")[1])
+        base = os.path.splitext(file_name)[0]
+        version = int(base.split("_")[1])
         if version > latest:
             latest = version
 
