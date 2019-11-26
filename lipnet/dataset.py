@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 from typing import Dict
 
 import cv2
@@ -7,6 +8,7 @@ import editdistance
 import imageio
 import numpy as np
 import torch
+from progressbar import ProgressBar
 from torch.utils.data import Dataset, DataLoader
 
 from lipnet.augmentation import horizontal_flip, color_normalize
@@ -15,26 +17,34 @@ from utils.dataset import alignments
 
 
 class GridDataset(Dataset):
-    LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
+    LETTERS = [' ', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
                'U', 'V', 'W', 'X', 'Y', 'Z']
     TARGET_TEXT_LENGTH = 20
-    TARGET_IMAGES_LENGTH = 45  # 45 is biggest end-start
+    TARGET_IMAGES_LENGTH = 45  # 45 is biggest calculated with end - start
 
     def __init__(self, base_dir: str, is_training: bool, is_overlapped: bool):
         self.base_dir = base_dir
         self.is_training = is_training
         self.speakers_dict = self._load_speaker_dict(base_dir, is_training, is_overlapped)
 
-        max_frames = 0
-
         self.data = []
-        for speaker_key in self.speakers_dict:
+
+        skipped = 0
+        video_count = 0
+
+        print("Loading dataset")
+        progress_bar = ProgressBar(len(self.speakers_dict.values())).start()
+
+        for i, speaker_key in enumerate(self.speakers_dict):
             speaker = self._get_speaker_number_from_key(speaker_key)
             for sentence_id in self.speakers_dict[speaker_key]:
 
                 if len(os.listdir(zones.get_grid_image_speaker_sentence_dir(base_dir, speaker, sentence_id))) < 75:
-                    # skipping for now
+                    # skipping videos that didn't successfully convert to 75 images
+                    skipped += 1
                     continue
+                else:
+                    video_count += 1
 
                 align_file_path = zones.get_grid_align_file_path(base_dir, speaker, sentence_id)
                 aligns = alignments.load_frame_alignments(align_file_path)
@@ -54,6 +64,10 @@ class GridDataset(Dataset):
                     }
                     prev_words.append(word)
                     self.data.append(record)
+            progress_bar.update(i)
+
+        progress_bar.finish()
+        print("Skipped videos {}/{}={:2f}%".format(skipped, video_count, 100*skipped/video_count))
 
     def __len__(self):
         return len(self.data)
@@ -126,7 +140,7 @@ class GridDataset(Dataset):
         prev_index = -1
         text = []
         for n in array:
-            if n < 0 or n >= len(GridDataset.LETTERS) or n == prev_index:
+            if n < 0 or n >= len(GridDataset.LETTERS) or n == prev_index or GridDataset.LETTERS[n] == ' ':
                 continue
             text.append(GridDataset.LETTERS[n])
             prev_index = n

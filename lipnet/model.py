@@ -1,13 +1,21 @@
 import math
+import os
+from typing import Tuple, List
 
 import torch
 import torch.nn as nn
 import torch.nn.init as init
+from torch.optim.optimizer import Optimizer
+
+from utils import zones
 
 
 class LipNet(torch.nn.Module):
-    def __init__(self, dropout_p=0.5):
+    def __init__(self, base_dir: str, dropout_p=0.5):
         super(LipNet, self).__init__()
+
+        self.base_dir = base_dir
+
         self.conv1 = nn.Conv3d(3, 32, (3, 5, 5), (1, 2, 2), (1, 2, 2))
         self.pool1 = nn.MaxPool3d((1, 2, 2), (1, 2, 2))
 
@@ -88,6 +96,36 @@ class LipNet(torch.nn.Module):
         x = x.permute(1, 0, 2).contiguous()
         return x
 
-    @staticmethod
-    def load():
-        return LipNet()
+    def save(self, epoch: int, optimizer: Optimizer, train_epoch_losses: List[float],
+             test_epoch_losses: List[float]):
+
+        file_path = zones.get_model_file_path(self.base_dir, epoch)
+
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': self.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'train_epoch_losses': train_epoch_losses,
+            'test_epoch_losses': test_epoch_losses,
+        }, file_path)
+
+    def load_existing_model_checkpoint(self, optimizer: Optimizer, target_device: torch.device) -> Tuple[
+        int, List[float], List[float]]:
+
+        file_path = zones.get_model_latest_file_path(self.base_dir)
+        if file_path is None or not os.path.isfile(file_path):
+            raise ValueError("{} not found".format(file_path))
+
+        checkpoint = torch.load(file_path)
+
+        self.load_state_dict(checkpoint['model_state_dict'])
+
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+
+        for state in optimizer.state.values():
+            for k, v in state.items():
+                if torch.is_tensor(v):
+                    state[k] = v.to(target_device)
+        self.to(target_device)
+
+        return checkpoint['epoch'], checkpoint["train_epoch_losses"], checkpoint["test_epoch_losses"]
