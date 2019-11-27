@@ -1,17 +1,15 @@
 import json
 import os
-import sys
 from typing import Dict
 
-import cv2
 import editdistance
-import imageio
 import numpy as np
 import torch
+from PIL import Image
 from progressbar import ProgressBar
 from torch.utils.data import Dataset, DataLoader
 
-from lipnet.augmentation import horizontal_flip, color_normalize
+from lipnet import augmentation
 from utils import zones
 from utils.dataset import alignments
 
@@ -77,10 +75,7 @@ class GridDataset(Dataset):
         images = self._load_mouth_images(self.base_dir, record["speaker"], record["sentence_id"])
         images = images[record["start_frame"]:record["end_frame"]]
 
-        if self.is_training:
-            images = horizontal_flip(images, p=0.5)
-
-        images = color_normalize(images)
+        images = augmentation.transform(images, self.is_training)
 
         images_length = images.shape[0]
 
@@ -125,15 +120,14 @@ class GridDataset(Dataset):
         return int(speaker_key.split('_')[1])
 
     @staticmethod
-    def _load_mouth_images(base_dir: str, speaker: int, sentence_id: str) -> np.ndarray:
+    def _load_mouth_images(base_dir: str, speaker: int, sentence_id: str):
         images_dir = zones.get_grid_image_speaker_sentence_dir(base_dir, speaker, sentence_id)
         images = []
         for image_name in os.listdir(images_dir):
             image_file_path = os.path.join(images_dir, image_name)
-            image = imageio.imread(image_file_path)
-            image = cv2.resize(image, (128, 64), interpolation=cv2.INTER_LANCZOS4)
+            image = Image.open(image_file_path)
             images.append(image)
-        return np.array(images).astype(np.float32)
+        return images
 
     @staticmethod
     def convert_ctc_array_to_text(array: np.ndarray):
