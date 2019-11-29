@@ -9,10 +9,11 @@ from PIL.Image import NEAREST
 
 def transform(images: List[Image], is_training: bool):
     angle = random.randint(-5, 5)
+    should_flip = True if is_training and random.random() < 0.5 else False
 
     for i, image in enumerate(images):
         if is_training:
-            if random.random() < 0.5:
+            if should_flip:
                 image = TF.hflip(image)
             image = TF.rotate(image, angle)
         image = TF.resize(image, (64, 128), interpolation=NEAREST)
