@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
 import editdistance
 import numpy as np
@@ -73,26 +73,20 @@ class GridDataset(Dataset):
 
     def __getitem__(self, idx: int) -> Dict:
         record = self.data[idx]
+
         images = self._load_mouth_images(self.base_dir, record["speaker"], record["sentence_id"])
         images = images[record["start_frame"]:record["end_frame"]]
 
         images = augmentation.transform(images, self.is_training)
-
-        images_length = images.shape[0]
-
-        if images_length == 0:
-            print("{}, {} is empty".format(record["speaker"], record["sentence_id"]))
-            raise Exception("corrupted/bad image folder for {}, {}".format(record["speaker"], record["sentence_id"]))
-
+        images_length = images.shape[0]  # get length before padding
         images = self._pad_array(images, GridDataset.TARGET_IMAGES_LENGTH)
 
         word_tensor = self.convert_text_to_array(record["word"])
-
-        word_length = word_tensor.shape[0]
+        word_length = word_tensor.shape[0]  # get length before padding
         word_tensor = self._pad_array(word_tensor, GridDataset.TARGET_TEXT_LENGTH)
 
-        spoken_words = " ".join(record["prev_words"])
-        gpt2_words = np.zeros(0)  # get gpt2 output
+        # spoken_words = " ".join(record["prev_words"])
+        # gpt2_words = np.zeros(0)  # get gpt2 output
 
         return {"images_tensor": torch.FloatTensor(images.transpose(3, 0, 1, 2)),
                 "images_length": images_length,
@@ -131,7 +125,7 @@ class GridDataset(Dataset):
         return images
 
     @staticmethod
-    def convert_ctc_array_to_text(array: np.ndarray, target_length: Optional[int] = None):
+    def convert_ctc_array_to_text(array: np.ndarray, target_length: Optional[int] = None) -> str:
         if target_length is not None:
             array = array[:target_length]
 
@@ -161,11 +155,11 @@ class GridDataset(Dataset):
         return np.array(array)
 
     @staticmethod
-    def cer(predict, truth):
+    def cer(predict, truth) -> List[float]:
         cer = [1.0 * editdistance.eval(p[0], p[1]) / len(p[1]) for p in zip(predict, truth)]
         return cer
 
-    def get_data_loader(self, batch_size: int, num_workers: int, shuffle: bool):
+    def get_data_loader(self, batch_size: int, num_workers: int, shuffle: bool) -> DataLoader:
         return DataLoader(self,
                           batch_size=batch_size,
                           shuffle=shuffle,
