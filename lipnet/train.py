@@ -1,12 +1,12 @@
 import os
 from typing import List
 
+import numpy as np
 import torch
 from progressbar import ProgressBar
+from torch import device
 from torch import nn, optim
 from torch.optim.optimizer import Optimizer
-from torch import device
-import numpy as np
 
 from lipnet.dataset import GridDataset
 from lipnet.model import LipNet
@@ -23,7 +23,7 @@ def run(base_dir: str, use_overlapped: bool, batch_size: int, num_workers: int, 
     model.to(target_device)
 
     optimizer = optim.Adam(model.parameters(),
-                           lr=1e-4,
+                           lr=2e-5,
                            weight_decay=0.,
                            amsgrad=True)
 
@@ -48,6 +48,7 @@ def train(model: LipNet, train_dataset: GridDataset, optimizer: Optimizer, loss_
         progress_bar = ProgressBar(len(loader)).start()
 
         batch_losses = []
+
         for (i, record) in enumerate(loader):
             model.train()
             images_tensor = record['images_tensor'].to(target_device)
@@ -66,13 +67,13 @@ def train(model: LipNet, train_dataset: GridDataset, optimizer: Optimizer, loss_
 
             optimizer.step()
 
-            pred_text = ctc_decode(logits)
+            pred_text = ctc_decode(logits, images_length.cpu().numpy())
             actual_text = record["word_str"]
 
             if i % 100 == 0:
                 for a, p in zip(actual_text, pred_text):
                     print("truth, pred: {}, {}".format(a, p))
-                    print(loss.item())
+                print(loss.item())
 
             train_cer.extend(GridDataset.cer(pred_text, actual_text))
             progress_bar.update(i)
@@ -85,6 +86,12 @@ def train(model: LipNet, train_dataset: GridDataset, optimizer: Optimizer, loss_
             model.save(epoch, optimizer, train_losses, [])
 
 
-def ctc_decode(y):
+def ctc_decode(y, images_length: np.ndarray):
     y = y.argmax(-1)
-    return [GridDataset.convert_ctc_array_to_text(y[_]) for _ in range(y.size(0))]
+
+    result = []
+    for i in range(y.size(0)):
+        target_length = images_length[i]
+        text = GridDataset.convert_ctc_array_to_text(y[i], target_length)
+        result.append(text)
+    return result

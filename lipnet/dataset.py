@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Dict
+from typing import Dict, Optional
 
 import editdistance
 import numpy as np
@@ -17,7 +17,7 @@ from utils.dataset import alignments
 class GridDataset(Dataset):
     LETTERS = [' ', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
                'U', 'V', 'W', 'X', 'Y', 'Z']
-    TARGET_TEXT_LENGTH = 20
+    TARGET_TEXT_LENGTH = 6
     TARGET_IMAGES_LENGTH = 45  # 45 is biggest calculated with end - start
 
     def __init__(self, base_dir: str, is_training: bool, is_overlapped: bool):
@@ -52,6 +52,7 @@ class GridDataset(Dataset):
                 for word, start_frame, end_frame in aligns:
                     if word in ("sil", "sp",):
                         continue
+
                     record = {
                         "word": word,
                         "start_frame": start_frame,
@@ -130,7 +131,10 @@ class GridDataset(Dataset):
         return images
 
     @staticmethod
-    def convert_ctc_array_to_text(array: np.ndarray):
+    def convert_ctc_array_to_text(array: np.ndarray, target_length: Optional[int] = None):
+        if target_length is not None:
+            array = array[:target_length]
+
         prev_index = -1
         text = []
         for n in array:
