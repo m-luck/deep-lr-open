@@ -4,13 +4,13 @@ from typing import Dict, Optional, List
 
 import editdistance
 import numpy as np
+import progressbar
 import torch
 from PIL import Image
-from progressbar import ProgressBar
 from torch.utils.data import Dataset, DataLoader
 
 from lipnet import augmentation
-from utils import zones
+from utils import zones, progressbar_utils
 from utils.dataset import alignments
 
 
@@ -31,7 +31,7 @@ class GridDataset(Dataset):
         video_count = 0
 
         print("Loading dataset")
-        progress_bar = ProgressBar(len(self.speakers_dict.values())).start()
+        progress_bar = progressbar_utils.get_adaptive_progressbar(len(self.speakers_dict.values())).start()
 
         for i, speaker_key in enumerate(self.speakers_dict):
             speaker = self._get_speaker_number_from_key(speaker_key)

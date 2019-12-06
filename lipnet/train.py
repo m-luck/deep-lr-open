@@ -4,14 +4,13 @@ from typing import List
 import numpy as np
 import progressbar
 import torch
-from progressbar import ProgressBar
 from torch import device
 from torch import nn, optim
 from torch.optim.optimizer import Optimizer
 
 from lipnet.dataset import GridDataset
 from lipnet.model import LipNet
-from utils import zones
+from utils import zones, progressbar_utils
 
 
 def run(base_dir: str, use_overlapped: bool, batch_size: int, num_workers: int, target_device: device):
@@ -33,7 +32,7 @@ def run(base_dir: str, use_overlapped: bool, batch_size: int, num_workers: int, 
     model_file_path = zones.get_model_latest_file_path(base_dir)
     if model_file_path is not None and os.path.isfile(model_file_path):
         last_epoch, train_losses, val_losses, train_cers, val_cers = model.load_existing_model_checkpoint(optimizer,
-                                                                                                           target_device)
+                                                                                                          target_device)
         start_epoch = last_epoch + 1
 
     train(model, train_dataset, val_dataset, optimizer, loss_fn, batch_size, num_workers, target_device, start_epoch,
@@ -48,9 +47,9 @@ def validate(model: LipNet, val_dataset: GridDataset, loss_fn: nn.CTCLoss, batch
         val_loader = val_dataset.get_data_loader(batch_size, num_workers, shuffle=False)
 
         print("Starting validation")
-        progress_bar = ProgressBar(len(val_loader)).start()
+        progress_bar = progressbar_utils.get_adaptive_progressbar(len(val_loader)).start()
 
-        batch_cer = []
+        batch_cers = []
         batch_losses = []
         for (i, record) in enumerate(val_loader):
             images_tensor = record['images_tensor'].to(target_device)
@@ -67,13 +66,16 @@ def validate(model: LipNet, val_dataset: GridDataset, loss_fn: nn.CTCLoss, batch
 
             pred_text = ctc_decode(logits.cpu().numpy(), images_length.cpu().numpy())
             actual_text = record["word_str"]
-            batch_cer.extend(GridDataset.cer(pred_text, actual_text))
+
+            cers = GridDataset.cer(pred_text, actual_text)
+            batch_cers.append(np.mean(cers))
+
             progress_bar.update(i)
 
         progress_bar.finish()
 
         epoch_loss = np.mean(batch_losses)
-        epoch_cer = np.mean(batch_cer)
+        epoch_cer = np.mean(batch_cers)
 
     return epoch_loss, epoch_cer
 
@@ -89,7 +91,7 @@ def train(model: LipNet, train_dataset: GridDataset, val_dataset: GridDataset, o
 
     for epoch in range(start_epoch, start_epoch + 20):
         print("Starting epoch {} out of {}".format(epoch, start_epoch + 20))
-        progress_bar = ProgressBar(len(loader)).start()
+        progress_bar = progressbar_utils.get_adaptive_progressbar(len(loader)).start()
 
         batch_losses = []
         batch_cers = []
@@ -116,9 +118,10 @@ def train(model: LipNet, train_dataset: GridDataset, val_dataset: GridDataset, o
             pred_text = ctc_decode(logits.detach().cpu().numpy(), images_length.cpu().numpy())
             actual_text = record["word_str"]
 
-            batch_cers.extend(GridDataset.cer(pred_text, actual_text))
-            progress_bar.update(i)
+            cers = GridDataset.cer(pred_text, actual_text)
+            batch_cers.append(np.mean(cers))
 
+            progress_bar.update(i)
 
         progress_bar.finish()
 

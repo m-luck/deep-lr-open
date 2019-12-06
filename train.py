@@ -6,7 +6,7 @@ from lipnet.train import run
 
 
 def main(args):
-    run(args.base_dir, False, batch_size=50, num_workers=10, target_device=torch.device("cuda"))
+    run(args.base_dir, False, batch_size=args.batch_size, num_workers=args.num_workers, target_device=torch.device("cuda"))
 
 
 if __name__ == '__main__':
@@ -16,8 +16,8 @@ if __name__ == '__main__':
     parser.add_argument('--test_overlapped', required=False, default=False, action='store_true',
                         help='Use test overlapped')
     parser.add_argument('--temporal_aug', default=0.05, type=float, help='temporal jittering probability')
-    parser.add_argument('--use_words', default=True, type=bool, help='whether to use word training samples')
-    parser.add_argument('--min_timesteps', default=2, type=int, help='min frames, for filtering bad data')
-    parser.add_argument('--max_timesteps', default=75, type=int, help='maximum number of frames per sub, for preallocation')
+    parser.add_argument('--batch_size', required=False, default=50, type=int, help='Batch size')
+    parser.add_argument('--num_workers', required=False, default=4, type=int, help='Num workers for data loaders')
+
     args = parser.parse_args()
     main(args)
