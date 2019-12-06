@@ -66,7 +66,7 @@ class GridDataset(Dataset):
             progress_bar.update(i)
 
         progress_bar.finish()
-        print("Skipped videos {}/{}={:2f}%".format(skipped, video_count, 100*skipped/video_count))
+        print("Skipped videos {}/{}={:2f}%".format(skipped, video_count, 100 * skipped / video_count))
 
     def __len__(self):
         return len(self.data)
@@ -164,4 +164,5 @@ class GridDataset(Dataset):
                           batch_size=batch_size,
                           shuffle=shuffle,
                           num_workers=num_workers,
-                          drop_last=False)
+                          drop_last=False,
+                          pin_memory=True)

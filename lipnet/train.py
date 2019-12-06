@@ -16,7 +16,7 @@ from utils import zones
 
 def run(base_dir: str, use_overlapped: bool, batch_size: int, num_workers: int, target_device: device):
     train_dataset = GridDataset(base_dir, is_training=True, is_overlapped=use_overlapped)
-    test_dataset = GridDataset(base_dir, is_training=False, is_overlapped=use_overlapped)
+    val_dataset = GridDataset(base_dir, is_training=False, is_overlapped=use_overlapped)
 
     loss_fn = nn.CTCLoss(blank=GridDataset.LETTERS.index(' '), reduction='mean', zero_infinity=True).to(target_device)
 
@@ -28,26 +28,31 @@ def run(base_dir: str, use_overlapped: bool, batch_size: int, num_workers: int, 
                            weight_decay=0.,
                            amsgrad=True)
 
-    start_epoch, train_losses, test_losses = 0, [], []
+    start_epoch, train_losses, val_losses, train_cers, val_cers = 0, [], [], [], []
 
     model_file_path = zones.get_model_latest_file_path(base_dir)
     if model_file_path is not None and os.path.isfile(model_file_path):
-        start_epoch, train_losses, test_losses = model.load_existing_model_checkpoint(optimizer, target_device)
+        last_epoch, train_losses, val_losses, train_cers, val_cers = model.load_existing_model_checkpoint(optimizer,
+                                                                                                           target_device)
+        start_epoch = last_epoch + 1
 
-    train(model, train_dataset, test_dataset, optimizer, loss_fn, batch_size, num_workers, target_device, start_epoch, train_losses,
-          test_losses)
+    train(model, train_dataset, val_dataset, optimizer, loss_fn, batch_size, num_workers, target_device, start_epoch,
+          train_losses,
+          val_losses, train_cers, val_cers)
 
 
-def test(model: LipNet, test_dataset: GridDataset, loss_fn: nn.CTCLoss, batch_size: int,
-         num_workers: int, target_device: torch.device):
-
-    with torch.no_grad:
+def validate(model: LipNet, val_dataset: GridDataset, loss_fn: nn.CTCLoss, batch_size: int,
+             num_workers: int, target_device: torch.device):
+    with torch.no_grad():
         model.eval()
-        test_loader = test_dataset.get_data_loader(batch_size, num_workers, shuffle=False)
+        val_loader = val_dataset.get_data_loader(batch_size, num_workers, shuffle=False)
 
-        test_cer = []
+        print("Starting validation")
+        progress_bar = ProgressBar(len(val_loader)).start()
+
+        batch_cer = []
         batch_losses = []
-        for (i, record) in enumerate(test_loader):
+        for (i, record) in enumerate(val_loader):
             images_tensor = record['images_tensor'].to(target_device)
             word_tensor = record['word_tensor'].to(target_device)
             images_length = record['images_length'].to(target_device)
@@ -62,26 +67,32 @@ def test(model: LipNet, test_dataset: GridDataset, loss_fn: nn.CTCLoss, batch_si
 
             pred_text = ctc_decode(logits.cpu().numpy(), images_length.cpu().numpy())
             actual_text = record["word_str"]
-            test_cer.extend(GridDataset.cer(pred_text, actual_text))
+            batch_cer.extend(GridDataset.cer(pred_text, actual_text))
+            progress_bar.update(i)
+
+        progress_bar.finish()
 
         epoch_loss = np.mean(batch_losses)
-        epoch_cer = np.mean(test_cer)
+        epoch_cer = np.mean(batch_cer)
 
     return epoch_loss, epoch_cer
 
 
-def train(model: LipNet, train_dataset: GridDataset, test_dataset: GridDataset, optimizer: Optimizer, loss_fn: nn.CTCLoss, batch_size: int,
+def train(model: LipNet, train_dataset: GridDataset, val_dataset: GridDataset, optimizer: Optimizer,
+          loss_fn: nn.CTCLoss, batch_size: int,
           num_workers: int, target_device: torch.device, start_epoch: int, train_losses: List[float],
-          test_losses: List[float]):
+          val_losses: List[float], train_cers: List[float],
+          val_cers: List[float]):
     loader = train_dataset.get_data_loader(batch_size, num_workers, shuffle=True)
 
-    best_train_loss = float('inf') if len(train_losses) == 0 else min(train_losses)
-    train_cer = []
-    for epoch in range(start_epoch, start_epoch + 10):
-        print("Starting epoch {} out of {}".format(epoch, start_epoch + 10))
+    best_val_loss = float('inf') if len(val_losses) == 0 else min(val_losses)
+
+    for epoch in range(start_epoch, start_epoch + 20):
+        print("Starting epoch {} out of {}".format(epoch, start_epoch + 20))
         progress_bar = ProgressBar(len(loader)).start()
 
         batch_losses = []
+        batch_cers = []
 
         for (i, record) in enumerate(loader):
             model.train()
@@ -105,23 +116,30 @@ def train(model: LipNet, train_dataset: GridDataset, test_dataset: GridDataset, 
             pred_text = ctc_decode(logits.detach().cpu().numpy(), images_length.cpu().numpy())
             actual_text = record["word_str"]
 
-            if i % 100 == 0:
-                for a, p in zip(actual_text, pred_text):
-                    print("truth, pred: {}, {}".format(a, p))
-                print(loss.item())
-
-            train_cer.extend(GridDataset.cer(pred_text, actual_text))
+            batch_cers.extend(GridDataset.cer(pred_text, actual_text))
             progress_bar.update(i)
 
+
         progress_bar.finish()
+
         epoch_loss = np.mean(batch_losses)
         train_losses.append(epoch_loss)
+        epoch_cer = np.mean(batch_cers)
+        train_cers.append(epoch_cer)
 
-        test_epoch_loss, test_epoch_cer = test(model, test_dataset, loss_fn, batch_size, num_workers, target_device)
-        test_losses.append(test_epoch_loss)
+        val_epoch_loss, val_epoch_cer = validate(model, val_dataset, loss_fn, batch_size, num_workers, target_device)
+        val_losses.append(val_epoch_loss)
+        val_cers.append(val_epoch_cer)
 
-        if epoch_loss < best_train_loss:
-            model.save(epoch, optimizer, train_losses, [])
+        print(
+            "Epoch train loss: {:02f}, train cer: {:02f}, val loss {:02f}, val cer {:02f}".format(epoch_loss, epoch_cer,
+                                                                                                  val_epoch_loss,
+                                                                                                  val_epoch_cer))
+
+        if val_epoch_loss < best_val_loss:
+            print("epoch val loss: {:02f} better than previous best: {:02f}".format(val_epoch_loss, best_val_loss))
+            best_val_loss = val_epoch_loss
+            model.save(epoch, optimizer, train_losses, val_losses, train_cers, val_cers)
 
 
 def ctc_decode(y: np.ndarray, images_length: np.ndarray) -> List[str]:
