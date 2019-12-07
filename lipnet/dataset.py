@@ -20,11 +20,11 @@ class GridDataset(Dataset):
     TARGET_TEXT_LENGTH = 6
     TARGET_IMAGES_LENGTH = 45  # 45 is biggest calculated with end - start
 
-    def __init__(self, base_dir: str, is_training: bool, is_overlapped: bool):
+    def __init__(self, base_dir: str, is_training: bool, is_overlapped: bool, temporal_aug: Optional[float] = None):
         self.base_dir = base_dir
         self.is_training = is_training
         self.speakers_dict = self._load_speaker_dict(base_dir, is_training, is_overlapped)
-
+        self.temporal_aug = temporal_aug if temporal_aug is not None else 0.0
         self.data = []
 
         skipped = 0
@@ -77,7 +77,7 @@ class GridDataset(Dataset):
         images = self._load_mouth_images(self.base_dir, record["speaker"], record["sentence_id"])
         images = images[record["start_frame"]:record["end_frame"]]
 
-        images = augmentation.transform(images, self.is_training)
+        images = augmentation.transform(images, self.is_training, self.temporal_aug)
         images_length = images.shape[0]  # get length before padding
         images = self._pad_array(images, GridDataset.TARGET_IMAGES_LENGTH)
 

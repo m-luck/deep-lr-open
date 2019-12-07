@@ -13,9 +13,12 @@ from lipnet.model import LipNet
 from utils import zones, progressbar_utils
 
 
-def run(base_dir: str, use_overlapped: bool, batch_size: int, num_workers: int, target_device: device):
-    train_dataset = GridDataset(base_dir, is_training=True, is_overlapped=use_overlapped)
-    val_dataset = GridDataset(base_dir, is_training=False, is_overlapped=use_overlapped)
+def run(base_dir: str, use_overlapped: bool, batch_size: int, num_workers: int, target_device: device,
+        temporal_aug: float):
+    train_dataset = GridDataset(base_dir, is_training=True, is_overlapped=use_overlapped,
+                                temporal_aug=temporal_aug)
+    val_dataset = GridDataset(base_dir, is_training=False, is_overlapped=use_overlapped,
+                              temporal_aug=temporal_aug)
 
     loss_fn = nn.CTCLoss(blank=GridDataset.LETTERS.index(' '), reduction='mean', zero_infinity=True).to(target_device)
 
