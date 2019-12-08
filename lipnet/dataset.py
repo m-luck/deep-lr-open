@@ -1,5 +1,7 @@
 import json
 import os
+import sys
+from enum import Enum
 from typing import Dict, Optional, List
 
 import editdistance
@@ -14,22 +16,30 @@ from utils import zones, progressbar_utils
 from utils.dataset import alignments
 
 
+class InputType(Enum):
+    SENTENCES = "SENTENCES"
+    WORDS = "WORDS"
+    BOTH = "BOTH"
+
+
 class GridDataset(Dataset):
     LETTERS = [' ', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
                'U', 'V', 'W', 'X', 'Y', 'Z']
-    TARGET_TEXT_LENGTH = 6
-    TARGET_IMAGES_LENGTH = 45  # 45 is biggest calculated with end - start
+    TARGET_TEXT_LENGTH = 31
+    TARGET_IMAGES_LENGTH = 74
 
-    def __init__(self, base_dir: str, is_training: bool, is_overlapped: bool, temporal_aug: Optional[float] = None):
+    def __init__(self, base_dir: str, is_training: bool, is_overlapped: bool, input_type: InputType, temporal_aug: Optional[float] = None):
         self.base_dir = base_dir
         self.is_training = is_training
         self.speakers_dict = self._load_speaker_dict(base_dir, is_training, is_overlapped)
         self.temporal_aug = temporal_aug if temporal_aug is not None else 0.0
+        self.input_type = input_type
         self.data = []
 
         skipped = 0
         video_count = 0
 
+        max_text_len = 0
         print("Loading dataset")
         progress_bar = progressbar_utils.get_adaptive_progressbar(len(self.speakers_dict.values())).start()
 
@@ -47,26 +57,50 @@ class GridDataset(Dataset):
                 align_file_path = zones.get_grid_align_file_path(base_dir, speaker, sentence_id)
                 aligns = alignments.load_frame_alignments(align_file_path)
 
-                prev_words = []
+                if self.input_type == InputType.BOTH or self.input_type == InputType.WORDS:
+                    prev_words = []
 
-                for word, start_frame, end_frame in aligns:
-                    if word in ("sil", "sp",):
-                        continue
+                    for word, start_frame, end_frame in aligns:
+                        if word in ("sil", "sp",):
+                            continue
 
+                        record = {
+                            "text": word,
+                            "start_frame": start_frame,
+                            "end_frame": end_frame,
+                            "speaker": speaker,
+                            "sentence_id": sentence_id,
+                            "prev_words": prev_words.copy()
+                        }
+                        prev_words.append(word)
+                        self.data.append(record)
+                if self.input_type == InputType.BOTH or self.input_type == InputType.SENTENCES:
+                    words = []
+                    min_start_frame = 10000
+                    max_end_frame = 0
+                    for word, start_frame, end_frame in aligns:
+                        min_start_frame = min(min_start_frame, start_frame)
+                        max_end_frame = max(max_end_frame, end_frame)
+                        if word in ("sil", "sp",):
+                            continue
+                        words.append(word)
+                    sentence = " ".join(words)
+                    max_text_len = max(max_text_len, len(sentence))
                     record = {
-                        "word": word,
-                        "start_frame": start_frame,
-                        "end_frame": end_frame,
+                        "text": sentence,
+                        "start_frame": min_start_frame,
+                        "end_frame": max_end_frame,
                         "speaker": speaker,
                         "sentence_id": sentence_id,
-                        "prev_words": prev_words.copy()
+                        "prev_words": []
                     }
-                    prev_words.append(word)
                     self.data.append(record)
+
             progress_bar.update(i)
 
         progress_bar.finish()
         print("Skipped videos {}/{}={:2f}%".format(skipped, video_count, 100 * skipped / video_count))
+        print("max text len {}".format(max_text_len))
 
     def __len__(self):
         return len(self.data)
@@ -81,18 +115,18 @@ class GridDataset(Dataset):
         images_length = images.shape[0]  # get length before padding
         images = self._pad_array(images, GridDataset.TARGET_IMAGES_LENGTH)
 
-        word_tensor = self.convert_text_to_array(record["word"])
-        word_length = word_tensor.shape[0]  # get length before padding
-        word_tensor = self._pad_array(word_tensor, GridDataset.TARGET_TEXT_LENGTH)
+        text_tensor = self.convert_text_to_array(record["text"])
+        text_length = text_tensor.shape[0]  # get length before padding
+        text_tensor = self._pad_array(text_tensor, GridDataset.TARGET_TEXT_LENGTH)
 
         # spoken_words = " ".join(record["prev_words"])
         # gpt2_words = np.zeros(0)  # get gpt2 output
 
         return {"images_tensor": torch.FloatTensor(images.transpose(3, 0, 1, 2)),
                 "images_length": images_length,
-                "word_tensor": torch.LongTensor(word_tensor),
-                "word_length": word_length,
-                "word_str": record["word"],
+                "text_tensor": torch.LongTensor(text_tensor),
+                "text_length": text_length,
+                "text_str": record["text"],
                 }
 
     @staticmethod
@@ -155,9 +189,16 @@ class GridDataset(Dataset):
         return np.array(array)
 
     @staticmethod
-    def cer(predict, truth) -> List[float]:
+    def cer(predict: List[str], truth: List[str]) -> List[float]:
         cer = [1.0 * editdistance.eval(p[0], p[1]) / len(p[1]) for p in zip(predict, truth)]
         return cer
+
+    @staticmethod
+    def wer(predict: List[str], truth: List[str]):
+        sentence_pairs = [(p[0].split(' '), p[1].split(' ')) for p in zip(predict, truth)]
+        #  edit distance lib does wer on lists
+        wer = [1.0 * editdistance.eval(s[0], s[1]) / len(s[1]) for s in sentence_pairs]  # s is a List[str]
+        return wer
 
     def get_data_loader(self, batch_size: int, num_workers: int, shuffle: bool) -> DataLoader:
         return DataLoader(self,
