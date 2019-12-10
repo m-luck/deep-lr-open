@@ -14,9 +14,9 @@ from utils import zones, progressbar_utils
 
 def run(base_dir: str, use_overlapped: bool, batch_size: int, num_workers: int, target_device: device,
         temporal_aug: float):
-    train_dataset = GridDataset(base_dir, is_training=True, is_overlapped=use_overlapped, input_type=InputType.BOTH,
+    train_dataset = GridDataset(base_dir, is_training=True, is_overlapped=use_overlapped, input_type=InputType.SENTENCES,
                                 temporal_aug=temporal_aug)
-    val_dataset = GridDataset(base_dir, is_training=False, is_overlapped=use_overlapped, input_type=InputType.BOTH,
+    val_dataset = GridDataset(base_dir, is_training=False, is_overlapped=use_overlapped, input_type=InputType.SENTENCES,
                               temporal_aug=temporal_aug)
 
     loss_fn = nn.CTCLoss(blank=GridDataset.LETTERS.index(' '), reduction='mean', zero_infinity=True).to(target_device)
@@ -58,6 +58,8 @@ def validate(model: LipNet, val_dataset: GridDataset, loss_fn: nn.CTCLoss, batch
         batch_cers = []
         batch_wers = []
         batch_losses = []
+
+        preds_and_actuals = None
         for (i, record) in enumerate(val_loader):
             images_tensor = record['images_tensor'].to(target_device)
             text_tensor = record['text_tensor'].to(target_device)
@@ -71,13 +73,17 @@ def validate(model: LipNet, val_dataset: GridDataset, loss_fn: nn.CTCLoss, batch
             loss = loss.cpu().numpy()
             batch_losses.append(loss)
 
-            pred_text = ctc_decode(logits.cpu().numpy(), images_length.cpu().numpy())
             actual_text = record["text_str"]
+            pred_text = ctc_decode(logits.cpu().numpy(), actual_text, images_length.cpu().numpy())
 
             cers = GridDataset.cer(pred_text, actual_text)
             batch_cers.append(np.mean(cers))
 
             _add_batch_wer_to_metrics(batch_wers=batch_wers, batch_pred_text=pred_text, batch_actual_text=actual_text)
+
+            if i == len(val_loader) - 1:
+                r = min(10, len(pred_text))
+                preds_and_actuals = list(zip(pred_text, actual_text))[:r]
 
             progress_bar.update(i)
 
@@ -86,6 +92,9 @@ def validate(model: LipNet, val_dataset: GridDataset, loss_fn: nn.CTCLoss, batch
         epoch_loss = np.mean(batch_losses)
         epoch_cer = np.mean(batch_cers)
         epoch_wer = np.mean(batch_wers)
+
+        for p, a in preds_and_actuals:
+            print("pred: {}, actual: {}".format(p, a))
 
     return epoch_loss, epoch_cer, epoch_wer
 
@@ -126,8 +135,8 @@ def train(model: LipNet, train_dataset: GridDataset, val_dataset: GridDataset, o
 
             optimizer.step()
 
-            pred_text = ctc_decode(logits.detach().cpu().numpy(), images_length.cpu().numpy())
             actual_text = record["text_str"]
+            pred_text = ctc_decode(logits.detach().cpu().numpy(), actual_text, images_length.cpu().numpy())
 
             cers = GridDataset.cer(pred_text, actual_text)
             batch_cers.append(np.mean(cers))
@@ -162,13 +171,14 @@ def train(model: LipNet, train_dataset: GridDataset, val_dataset: GridDataset, o
             model.save(epoch, optimizer, train_losses, val_losses, train_cers, val_cers, train_wers, val_wers)
 
 
-def ctc_decode(y: np.ndarray, images_length: np.ndarray) -> List[str]:
+def ctc_decode(y: np.ndarray, actual_text: List[str], images_length: np.ndarray) -> List[str]:
     y = y.argmax(-1)
 
     result = []
     for i in range(y.shape[0]):
+        is_sentence = True if ' ' in actual_text[i] else False
         target_length = images_length[i]
-        text = GridDataset.convert_ctc_array_to_text(y[i], target_length)
+        text = GridDataset.convert_ctc_array_to_text(y[i], target_length, is_sentence)
         result.append(text)
     return result
 

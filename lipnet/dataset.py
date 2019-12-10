@@ -159,19 +159,20 @@ class GridDataset(Dataset):
         return images
 
     @staticmethod
-    def convert_ctc_array_to_text(array: np.ndarray, target_length: Optional[int] = None) -> str:
-        if target_length is not None:
-            array = array[:target_length]
+    def convert_ctc_array_to_text(array: np.ndarray, target_length: int, is_sentence: bool) -> str:
+        array = array[:target_length]
 
         prev_index = -1
         text = []
         for n in array:
             if n < 0 or n >= len(GridDataset.LETTERS) or n == prev_index:
                 continue
-            if not GridDataset.LETTERS[n] == ' ':
+            if is_sentence:
+                text.append(GridDataset.LETTERS[n])
+            elif not GridDataset.LETTERS[n] == ' ':  # don't add spaces for word-level inputs
                 text.append(GridDataset.LETTERS[n])
             prev_index = n
-        return ''.join(text)
+        return ''.join(text).strip()
 
     @staticmethod
     def convert_array_to_text(array: np.ndarray) -> str:
@@ -190,13 +191,24 @@ class GridDataset(Dataset):
 
     @staticmethod
     def cer(predict: List[str], truth: List[str]) -> List[float]:
-        cer = [1.0 * editdistance.eval(p[0], p[1]) / len(p[1]) for p in zip(predict, truth)]
-        return cer
+        """ Ignore blank tokens in CER
+            Greedy ctc decoders ignore it https://github.com/SeanNaren/deepspeech.pytorch/blob/master/decoder.py
+        """
+        cers = []
+        for p, t in zip(predict, truth):
+            p = p.replace(" ", "").upper()
+            t = t.replace(" ", "").upper()
+            cer = 1.0 * editdistance.eval(p, t) / len(t)
+            cers.append(cer)
+        return cers
 
     @staticmethod
     def wer(predict: List[str], truth: List[str]):
-        sentence_pairs = [(p[0].split(' '), p[1].split(' ')) for p in zip(predict, truth)]
-        #  edit distance lib does wer on lists
+        """ Unfortunately no way to differentiate between blanks within words (which should be acceptable) and
+            blanks between words
+        """
+        sentence_pairs = [(p[0].upper().split(' '), p[1].upper().split(' ')) for p in zip(predict, truth)]
+        #  edit distance lib does WER on lists
         wer = [1.0 * editdistance.eval(s[0], s[1]) / len(s[1]) for s in sentence_pairs]  # s is a List[str]
         return wer
 
