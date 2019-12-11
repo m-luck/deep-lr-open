@@ -106,3 +106,4 @@ venv.bak/
 # Deep-LR
 *lock
 grid/
+.vscode/
