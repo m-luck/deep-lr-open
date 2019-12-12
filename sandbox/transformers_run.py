@@ -4,7 +4,7 @@ import numpy as np
 from transformers import GPT2Tokenizer, GPT2LMHeadModel
 
 """ 
-How to use this class:
+How to use this:
 
 from transformers_run import GPT2_Adapter
 ...
