@@ -25,7 +25,7 @@ def run(base_dir: str, use_overlapped: bool, batch_size: int, num_workers: int, 
     model.to(target_device)
 
     optimizer = optim.Adam(model.parameters(),
-                           lr=1e-4,
+                           lr=1e-4,  # 2e-5,
                            weight_decay=0.,
                            amsgrad=True)
 
@@ -37,9 +37,9 @@ def run(base_dir: str, use_overlapped: bool, batch_size: int, num_workers: int, 
             optimizer,
             target_device)
         start_epoch = last_epoch + 1
-        if start_epoch > 5:
-            for param_group in optimizer.param_groups:
-                param_group['lr'] = 2e-5
+        # if start_epoch > 5:
+        #     for param_group in optimizer.param_groups:
+        #         param_group['lr'] = 2e-5
 
     train(model, train_dataset, val_dataset, optimizer, loss_fn, batch_size, num_workers, target_device, start_epoch,
           train_losses,
@@ -109,8 +109,8 @@ def train(model: LipNet, train_dataset: GridDataset, val_dataset: GridDataset, o
 
     best_val_loss = float('inf') if len(val_losses) == 0 else min(val_losses)
 
-    for epoch in range(start_epoch, start_epoch + 20):
-        print("Starting epoch {} out of {}".format(epoch, start_epoch + 20))
+    for epoch in range(start_epoch, start_epoch + 100):
+        print("Starting epoch {} out of {}".format(epoch, start_epoch + 100))
         progress_bar = progressbar_utils.get_adaptive_progressbar(len(loader)).start()
 
         batch_losses = []

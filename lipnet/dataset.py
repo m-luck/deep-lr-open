@@ -7,6 +7,7 @@ from typing import Dict, Optional, List
 import editdistance
 import numpy as np
 import progressbar
+import pickle
 import torch
 from PIL import Image
 from torch.utils.data import Dataset, DataLoader
@@ -28,7 +29,8 @@ class GridDataset(Dataset):
     TARGET_TEXT_LENGTH = 31
     TARGET_IMAGES_LENGTH = 74
 
-    def __init__(self, base_dir: str, is_training: bool, is_overlapped: bool, input_type: InputType, temporal_aug: Optional[float] = None):
+    def __init__(self, base_dir: str, is_training: bool, is_overlapped: bool, input_type: InputType,
+                 temporal_aug: Optional[float] = None):
         self.base_dir = base_dir
         self.is_training = is_training
         self.speakers_dict = self._load_speaker_dict(base_dir, is_training, is_overlapped)
@@ -47,7 +49,9 @@ class GridDataset(Dataset):
             speaker = self._get_speaker_number_from_key(speaker_key)
             for sentence_id in self.speakers_dict[speaker_key]:
 
-                if len(os.listdir(zones.get_grid_image_speaker_sentence_dir(base_dir, speaker, sentence_id))) < 75:
+                images_dir = zones.get_grid_image_speaker_sentence_dir(base_dir, speaker, sentence_id)
+                if len(os.listdir(images_dir)) < 75 and not any(
+                        "images.pkl" in file_name for file_name in os.listdir(images_dir)):
                     # skipping videos that didn't successfully convert to 75 images
                     skipped += 1
                     continue
@@ -152,10 +156,14 @@ class GridDataset(Dataset):
     def _load_mouth_images(base_dir: str, speaker: int, sentence_id: str):
         images_dir = zones.get_grid_image_speaker_sentence_dir(base_dir, speaker, sentence_id)
         images = []
-        for image_name in os.listdir(images_dir):
-            image_file_path = os.path.join(images_dir, image_name)
-            image = Image.open(image_file_path)
-            images.append(image)
+        if any("images.pkl" in file_name for file_name in os.listdir(images_dir)):
+            with open(os.path.join(images_dir, "images.pkl")) as f:
+                images = pickle.load(f)
+        else:
+            for image_name in os.listdir(images_dir):
+                image_file_path = os.path.join(images_dir, image_name)
+                image = Image.open(image_file_path)
+                images.append(image)
         return images
 
     @staticmethod

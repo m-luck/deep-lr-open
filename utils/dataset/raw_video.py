@@ -4,7 +4,7 @@ import os
 import numpy as np
 import dlib
 from skimage.transform import resize
-from skimage.io import imsave
+import pickle
 import skimage.util
 from utils import zones
 
@@ -82,14 +82,21 @@ def _convert_and_save(args, video_file_path: str, output_dir: str):
     mouth_frames = _get_mouth_frames(frames, face_detector, face_predictor)
 
     os.makedirs(output_dir, exist_ok=True)
+    converted_frames = []
     for i, mouth_frame in enumerate(mouth_frames):
         try:
             mouth_frame = skimage.util.img_as_ubyte(mouth_frame)
         except ValueError as e:
             print(e)
             return
-        file_path = os.path.join(output_dir, "{}.png".format(i))
-        imsave(file_path, mouth_frame)
+        converted_frames.append(mouth_frame)
+
+    if len(converted_frames) < 75:
+        print("Video {} didn't convert to 75 frames".format(video_file_path))
+        return
+
+    output_path = os.path.join(output_dir, "images.pkl")
+    pickle.dump(converted_frames, output_path)
 
     print("Finished {}".format(video_file_path))
 
