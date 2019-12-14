@@ -36,16 +36,18 @@ class GPT2_Adapter():
         Requires manipulation function passed in to decide shape of tensor.
         Returns tensor of k_next one-hotted prediction words and its shape (a tuple).
         """
-        pred = get_prediction(context)
-        words = get_top_k_next_words(k_next, pred)
-        one_hotted = [word_to_one_hot(word) for word in words]
+        pred = self.get_prediction(context)
+        words = self.get_top_k_next_words(k_next, pred)
+        one_hotted = [self.word_to_one_hot(word) for word in words]
         tensor = shape_manipulator(one_hotted) # Replace input to this line for more robust tensor information such as nd embeddings. Original is one-hot.
         return tensor, tensor.size()   
 
-    def get_prediction(self, leading_text:str, cuda_on=self.cuda_on, num_tokens_predict=1):
+    def get_prediction(self, leading_text:str, num_tokens_predict=1):
         """
         Take a set of words, return the latest predicted word and its tokenized index.
         """
+
+        cuda_on = self.cuda_on
 
         # OPTIONAL: if we want to have more information on what's happening, activate the logger as follows
         import logging
@@ -125,6 +127,7 @@ class GPT2_Adapter():
 
 if __name__ == "__main__":
     # Will print out flat prediction
-    res, shape = context_to_flat_prediction_tensor("The world is in a")
+    gpt2adap = GPT2_Adapter(cuda_avail=False, verbose=True)
+    res, shape = gpt2adap.context_to_flat_prediction_tensor("The world is in a")
     print(res, shape)
 
