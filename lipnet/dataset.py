@@ -42,7 +42,7 @@ class GridDataset(Dataset):
         video_count = 0
 
         max_text_len = 0
-        print("Loading dataset")
+        print("Loading dataset count: {}".format(len(self.speakers_dict.values())))
         progress_bar = progressbar_utils.get_adaptive_progressbar(len(self.speakers_dict.values())).start()
 
         for i, speaker_key in enumerate(self.speakers_dict):
