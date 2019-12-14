@@ -2,12 +2,12 @@ import argparse
 
 import torch
 
-from lipnet.gpt2_with_train import run
+from lipnet.gpt2_train import run
 
 
 def main(args):
     run(args.base_dir, False, batch_size=args.batch_size, num_workers=args.num_workers,
-        target_device=torch.device("cuda"), temporal_aug=args.temporal_aug)
+        target_device=torch.device("cuda"), cache_in_ram=False, temporal_aug=args.temporal_aug)
 
 
 if __name__ == '__main__':

@@ -7,8 +7,6 @@ import torch.nn as nn
 import torch.nn.init as init
 from torch.optim.optimizer import Optimizer
 
-from sandbox.transformers_run import GPT2_Adapter
-
 from utils import zones
 
 class LipNet(torch.nn.Module):
@@ -29,14 +27,13 @@ class LipNet(torch.nn.Module):
         self.gru1 = nn.GRU(96 * 4 * 8, 256, 1, bidirectional=True)
         self.gru2 = nn.GRU(512, 256, 1, bidirectional=True)
 
-        self.FC = nn.Linear(512 + 297 * 5, 27 + 1) # Output plus pred tensor (297 * k)
+        self.FC = nn.Linear(184320 + (297 * 5), 27 + 1) # Flattened output plus pred tensor (297 * k)
         # self.langFC = nn.Linear(512, 27 + 1)
         self.dropout_p = dropout_p
 
         self.relu = nn.ReLU(inplace=True)
         self.dropout = nn.Dropout(self.dropout_p)
         self.dropout3d = nn.Dropout3d(self.dropout_p)
-        self.gpt2adap = GPT2_Adapter(cuda_avail=True, verbose=True)
         self._init()
 
     def _init(self):
@@ -65,10 +62,9 @@ class LipNet(torch.nn.Module):
                 init.orthogonal_(m.weight_hh_l0_reverse[i: i + 256])
                 init.constant_(m.bias_ih_l0_reverse[i: i + 256], 0)
 
-    def forward(self, x, prev_words):
+    def forward(self, x, ranked_predictions):
 
-        ranked_predictions, pred_shape = self.gpt2adap.context_to_flat_prediction_tensor(prev_words)
-        k = pred_shape.view(-1) / 297
+        ranked_predictions = ranked_predictions.type(torch.cuda.FloatTensor)
 
         x = self.conv1(x)
         x = self.relu(x)
@@ -99,8 +95,10 @@ class LipNet(torch.nn.Module):
         x = self.dropout(x)
 
         x_plus_pred = torch.cat([x.view(-1), ranked_predictions])
+        print(x_plus_pred.size())
         x = self.FC(x_plus_pred)
-        x = x.permute(1, 0, 2).contiguous()
+        print(x.size())
+        # x = x.permute(1, 0, 2).contiguous()
         return x
 
     def save(self, epoch: int, optimizer: Optimizer, train_epoch_losses: List[float],
