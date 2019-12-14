@@ -30,13 +30,15 @@ class GridDataset(Dataset):
     TARGET_IMAGES_LENGTH = 74
 
     def __init__(self, base_dir: str, is_training: bool, is_overlapped: bool, input_type: InputType,
-                 temporal_aug: Optional[float] = None):
+                 temporal_aug: Optional[float] = None, cache_in_ram: bool = False):
         self.base_dir = base_dir
         self.is_training = is_training
         self.speakers_dict = self._load_speaker_dict(base_dir, is_training, is_overlapped)
         self.temporal_aug = temporal_aug if temporal_aug is not None else 0.0
         self.input_type = input_type
+        self.cache_in_ram = cache_in_ram
         self.data = []
+        self.images_cache = {}
 
         skipped = 0
         video_count = 0
@@ -78,6 +80,8 @@ class GridDataset(Dataset):
                         }
                         prev_words.append(word)
                         self.data.append(record)
+                        if self.cache_in_ram:
+                            self._cache_in_ram(speaker, sentence_id, start_frame, end_frame)
                 if self.input_type == InputType.BOTH or self.input_type == InputType.SENTENCES:
                     words = []
                     min_start_frame = 10000
@@ -99,6 +103,8 @@ class GridDataset(Dataset):
                         "prev_words": []
                     }
                     self.data.append(record)
+                    if self.cache_in_ram:
+                        self._cache_in_ram(speaker, sentence_id, min_start_frame, max_end_frame)
 
             progress_bar.update(i)
 
@@ -112,8 +118,12 @@ class GridDataset(Dataset):
     def __getitem__(self, idx: int) -> Dict:
         record = self.data[idx]
 
-        images = self._load_mouth_images(self.base_dir, record["speaker"], record["sentence_id"])
-        images = images[record["start_frame"]:record["end_frame"]]
+        if self.cache_in_ram:
+            key = GridDataset._get_image_cache_key(int(record["speaker"]),  record["sentence_id"])
+            images = self.images_cache[key]
+        else:
+            images = self._load_mouth_images(self.base_dir, record["speaker"], record["sentence_id"])
+            images = images[record["start_frame"]:record["end_frame"]]
 
         images = augmentation.transform(images, self.is_training, self.temporal_aug)
         images_length = images.shape[0]  # get length before padding
@@ -132,6 +142,15 @@ class GridDataset(Dataset):
                 "text_length": text_length,
                 "text_str": record["text"],
                 }
+
+    def _cache_in_ram(self, speaker_number: int, sentence_id: str, start_frame: int, end_frame: int):
+        images = self._load_mouth_images(self.base_dir, speaker_number, sentence_id)
+        key = GridDataset._get_image_cache_key(speaker_number, sentence_id)
+        self.images_cache[key] = images[start_frame:end_frame]
+
+    @staticmethod
+    def _get_image_cache_key(speaker: int, sentence_id: str) -> str:
+        return "{}_{}".format(speaker, sentence_id)
 
     @staticmethod
     def _pad_array(array: np.ndarray, target_length: int) -> np.ndarray:

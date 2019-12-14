@@ -7,7 +7,7 @@ from lipnet.train import run
 
 def main(args):
     run(args.base_dir, False, batch_size=args.batch_size, num_workers=args.num_workers,
-        target_device=torch.device("cuda"), temporal_aug=args.temporal_aug)
+        target_device=torch.device("cuda"), temporal_aug=args.temporal_aug, cache_in_ram=args.cache_in_ram)
 
 
 if __name__ == '__main__':
@@ -20,6 +20,7 @@ if __name__ == '__main__':
                         help='temporal jittering probability')
     parser.add_argument('--batch_size', required=False, default=50, type=int, help='Batch size')
     parser.add_argument('--num_workers', required=False, default=4, type=int, help='Num workers for data loaders')
-
+    parser.add_argument('--cache_in_ram', required=False, default=False, action='store_true',
+                        help='Cache images in ram')
     args = parser.parse_args()
     main(args)
