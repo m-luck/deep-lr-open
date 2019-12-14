@@ -23,13 +23,13 @@ class GPT2_Adapter():
         """
         Returns flattened tensor of k_next one-hotted prediction words and its shape (a tuple).
         """
-        return context_to_prediction_tensor(context, lists_to_flat_tensor, k_next)   
+        return self.context_to_prediction_tensor(context, self.lists_to_flat_tensor, k_next)   
 
     def context_to_nd_prediction_tensor(self, context, k_next=5):
         """
         Returns flattened tensor of k_next one-hotted prediction words and its shape (a tuple).
         """
-        return context_to_prediction_tensor(context, lambda x: torch.from_numpy(np.array(x)), k_next)   
+        return self.context_to_prediction_tensor(context, lambda x: torch.from_numpy(np.array(x)), k_next)   
 
     def context_to_prediction_tensor(self, context, shape_manipulator, k_next=5):
         """
