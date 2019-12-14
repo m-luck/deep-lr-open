@@ -113,13 +113,16 @@ def save_mouth_images(args):
                 video_file_path = os.path.join(video_dir, file_name)
                 sentence_id = os.path.splitext(file_name)[0]
                 output_dir = os.path.join(zones.get_grid_image_speaker_dir(args.base_dir, speaker=speaker), sentence_id)
-                if os.path.isdir(output_dir) and len(os.listdir(output_dir)) >= 74:
+                if os.path.isdir(output_dir) and (len(os.listdir(output_dir)) >= 74 or any(
+                        "images.pkl" in file_name for file_name in os.listdir(output_dir))):
+                    print("Skipping, already completed: {}".format(output_dir))
                     continue
 
                 conversions.append((args, video_file_path, output_dir,))
 
     if args.parallel:
         with multiprocessing.Pool(processes=args.num_processes) as pool:
+            print("Starting pool of {} conversions".format(len(conversions)))
             pool.starmap(_convert_and_save, conversions)
     else:
         for args, video_file_path, output_dir in conversions:
