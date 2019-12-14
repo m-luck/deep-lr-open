@@ -96,7 +96,8 @@ def _convert_and_save(args, video_file_path: str, output_dir: str):
         return
 
     output_path = os.path.join(output_dir, "images.pkl")
-    pickle.dump(converted_frames, output_path)
+    with open(output_path, 'wb') as f:
+        pickle.dump(converted_frames, f)
 
     print("Finished {}".format(video_file_path))
 
