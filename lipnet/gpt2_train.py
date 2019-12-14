@@ -132,7 +132,7 @@ def train(model: LipNet, train_dataset: GridDataset, val_dataset: GridDataset, o
 
             optimizer.zero_grad()
 
-            logits = model(images_tensor)
+            logits = model(images_tensor, ranked_predictions)
 
             loss = loss_fn(logits.transpose(0, 1).log_softmax(-1), text_tensor, images_length.view(-1),
                            text_length.view(-1))
