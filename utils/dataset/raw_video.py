@@ -99,7 +99,7 @@ def _convert_and_save(args, video_file_path: str, output_dir: str):
     with open(output_path, 'wb') as f:
         pickle.dump(converted_frames, f)
 
-    print("Finished {}".format(video_file_path))
+    print("Finished {}".format(output_path))
 
 
 def save_mouth_images(args):
