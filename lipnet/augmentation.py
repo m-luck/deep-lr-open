@@ -5,6 +5,7 @@ import torch
 import torchvision.transforms.functional as TF
 from PIL.Image import Image
 from PIL.Image import LANCZOS
+import numpy as np
 
 
 def transform(images: List[Image], is_training: bool, temporal_aug: float):
@@ -12,6 +13,8 @@ def transform(images: List[Image], is_training: bool, temporal_aug: float):
     should_flip = True if is_training and random.random() < 0.5 else False
 
     for i, image in enumerate(images):
+        if isinstance(image, np.ndarray):
+            image = TF.to_pil_image(image)
         if is_training:
             if should_flip:
                 image = TF.hflip(image)
