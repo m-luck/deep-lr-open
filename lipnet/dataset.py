@@ -157,7 +157,7 @@ class GridDataset(Dataset):
         images_dir = zones.get_grid_image_speaker_sentence_dir(base_dir, speaker, sentence_id)
         images = []
         if any("images.pkl" in file_name for file_name in os.listdir(images_dir)):
-            with open(os.path.join(images_dir, "images.pkl")) as f:
+            with open(os.path.join(images_dir, "images.pkl"), "rb") as f:
                 images = pickle.load(f)
         else:
             for image_name in os.listdir(images_dir):
