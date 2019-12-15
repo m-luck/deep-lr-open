@@ -121,7 +121,7 @@ class GridDataset(Dataset):
             images = self.images_cache[key]
         else:
             images = self._load_mouth_images(self.base_dir, record["speaker"], record["sentence_id"])
-            images = images[record["start_frame"]:record["end_frame"]]
+        images = images[record["start_frame"]:record["end_frame"]]
 
         images = augmentation.transform(images, self.is_training, self.temporal_aug)
         images_length = images.shape[0]  # get length before padding
@@ -144,7 +144,7 @@ class GridDataset(Dataset):
     def _cache_in_ram(self, speaker_number: int, sentence_id: str, start_frame: int, end_frame: int):
         images = self._load_mouth_images(self.base_dir, speaker_number, sentence_id)
         key = GridDataset._get_image_cache_key(speaker_number, sentence_id)
-        self.images_cache[key] = images[start_frame:end_frame]
+        self.images_cache[key] = images
 
     @staticmethod
     def _get_image_cache_key(speaker: int, sentence_id: str) -> str:
