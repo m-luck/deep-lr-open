@@ -12,7 +12,7 @@ import torch
 from PIL import Image
 from torch.utils.data import Dataset, DataLoader
 
-from lipnet import augmentation
+from combined import augmentation
 from utils import zones, progressbar_utils
 from utils.dataset import alignments
 

@@ -18,7 +18,7 @@ class GPT2_Adapter():
     def __init__(self, cuda_avail=False, verbose=False):
         self.cuda_on = cuda_avail
         self.verbose = verbose
-	self.model_fn = os.path.join("new_gpt2", "pytorch_model.bin")
+        self.model_fn = os.path.join("new_gpt2", "pytorch_model.bin")
 
     def context_to_flat_prediction_tensor(self, context, k_next=5):
         """
@@ -61,7 +61,8 @@ class GPT2_Adapter():
 
         # Convert indexed tokens in a PyTorch tensor
         tokens_tensor = torch.tensor([indexed_tokens])
-	model_state_dict = torch.load(self.model_fn)
+
+        model_state_dict = torch.load(self.model_fn)
         model = GPT2LMHeadModel.from_pretrained('gpt2', state_dict = model_state_dict)
 
         # Set the model in evaluation mode to deactivate the DropOut modules

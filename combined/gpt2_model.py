@@ -27,8 +27,8 @@ class LipNet(torch.nn.Module):
         self.gru1 = nn.GRU(96 * 4 * 8, 256, 1, bidirectional=True)
         self.gru2 = nn.GRU(512, 256, 1, bidirectional=True)
 
-        self.FC = nn.Linear(184320 + (297 * 5), 27 + 1) # Flattened output plus pred tensor (297 * k)
-        # self.langFC = nn.Linear(512, 27 + 1)
+        # self.FC = nn.Linear(184320 + (297 * 5), 27 + 1) # Flattened output plus pred tensor (297 * k)
+        self.FC = nn.Linear(512, 27 + 1)
         self.dropout_p = dropout_p
 
         self.relu = nn.ReLU(inplace=True)
@@ -94,11 +94,11 @@ class LipNet(torch.nn.Module):
         x, h = self.gru2(x)
         x = self.dropout(x)
 
-        x_plus_pred = torch.cat([x.view(-1), ranked_predictions])
-        print(x_plus_pred.size())
+        # x_plus_pred = torch.cat([x.view(-1), ranked_predictions])
+        # print(x_plus_pred.size())
         x = self.FC(x_plus_pred)
         x = self.FC(x)
-        print(x.size())
+        # print(x.size())
         x = x.permute(1, 0, 2).contiguous()
         return x
 
