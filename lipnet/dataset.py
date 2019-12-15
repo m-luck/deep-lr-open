@@ -1,13 +1,11 @@
 import json
 import os
-import sys
+import pickle
 from enum import Enum
 from typing import Dict, Optional, List
 
 import editdistance
 import numpy as np
-import progressbar
-import pickle
 import torch
 from PIL import Image
 from torch.utils.data import Dataset, DataLoader
