@@ -24,6 +24,11 @@ def run(base_dir: str, use_overlapped: bool, batch_size: int, num_workers: int, 
     model: LipNet = LipNet(base_dir)
     model.to(target_device)
 
+    if torch.cuda.device_count() > 1:
+        model = nn.DataParallel(model)
+
+    print("Using {} gpus".format(torch.cuda.device_count()))
+
     optimizer = optim.Adam(model.parameters(),
                            lr=1e-4,  # 2e-5,
                            weight_decay=0.,
