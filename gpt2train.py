@@ -2,7 +2,7 @@ import argparse
 
 import torch
 
-from lipnet.gpt2_train import run
+from combined.gpt2_train import run
 
 
 def main(args):

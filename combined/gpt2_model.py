@@ -97,8 +97,9 @@ class LipNet(torch.nn.Module):
         x_plus_pred = torch.cat([x.view(-1), ranked_predictions])
         print(x_plus_pred.size())
         x = self.FC(x_plus_pred)
+        x = self.FC(x)
         print(x.size())
-        # x = x.permute(1, 0, 2).contiguous()
+        x = x.permute(1, 0, 2).contiguous()
         return x
 
     def save(self, epoch: int, optimizer: Optimizer, train_epoch_losses: List[float],

@@ -7,11 +7,11 @@ from torch import device
 from torch import nn, optim
 from torch.optim.optimizer import Optimizer
 
-from lipnet.gpt2_dataset import GridDataset, InputType
-from lipnet.gpt2_model import LipNet
+from combined.gpt2_dataset import GridDataset, InputType
+from combined.gpt2_model import LipNet
 from utils import zones, progressbar_utils
 
-from sandbox.transformers_run import GPT2_Adapter
+from language.transformers_run import GPT2_Adapter
 
 def run(base_dir: str, use_overlapped: bool, batch_size: int, num_workers: int, target_device: device,
         temporal_aug: float, cache_in_ram: bool):
