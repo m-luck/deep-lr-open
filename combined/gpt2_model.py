@@ -94,11 +94,14 @@ class LipNet(torch.nn.Module):
         x, h = self.gru2(x)
         x = self.dropout(x)
 
-        # x_plus_pred = torch.cat([x.view(-1), ranked_predictions])
-        # print(x_plus_pred.size())
+        x_plus_pred = torch.cat([x.view(-1), ranked_predictions])
+        print(x_plus_pred.size())
         x = self.FC(x_plus_pred)
-        x = self.FC(x)
-        # print(x.size())
+        # x = self.FC(x)
+        print(x.size())
+
+        # Expects dims 45, 16, 28
+        x = x.view(45, 16, 28)
         x = x.permute(1, 0, 2).contiguous()
         return x
 

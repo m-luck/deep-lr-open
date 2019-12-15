@@ -1,6 +1,7 @@
 import torch
 import heapq
 import numpy as np
+import os
 from transformers import GPT2Tokenizer, GPT2LMHeadModel
 
 """ 
@@ -18,7 +19,7 @@ class GPT2_Adapter():
     def __init__(self, cuda_avail=False, verbose=False):
         self.cuda_on = cuda_avail
         self.verbose = verbose
-        self.model_fn = os.path.join("new_gpt2", "pytorch_model.bin")
+        self.model_fn = os.path.join(os.path.dirname(os.path.abspath(__file__)), "new_gpt2", "pytorch_model.bin")
 
     def context_to_flat_prediction_tensor(self, context, k_next=5):
         """
@@ -63,7 +64,8 @@ class GPT2_Adapter():
         tokens_tensor = torch.tensor([indexed_tokens])
 
         model_state_dict = torch.load(self.model_fn)
-        model = GPT2LMHeadModel.from_pretrained('gpt2', state_dict = model_state_dict)
+        # model = GPT2LMHeadModel.from_pretrained('gpt2', state_dict = model_state_dict)
+        model = GPT2LMHeadModel.from_pretrained('gpt2')
 
         # Set the model in evaluation mode to deactivate the DropOut modules
         # This is important to have reproducible results during evaluation

@@ -125,8 +125,9 @@ def train(model: LipNet, train_dataset: GridDataset, val_dataset: GridDataset, o
             images_length = record['images_length'].to(target_device)
             text_length = record['text_length'].to(target_device)
 
-            prev_words = ' '.join(record['text_str'])
-            ranked_predictions, pred_shape = gpt2adap.context_to_flat_prediction_tensor(prev_words)
+            print(record['prev_words'])
+            prev_words = ' '.join(record['prev_words'])
+            ranked_predictions, pred_shape = gpt2adap.context_to_flat_prediction_tensor(prev_words) if prev_words else gpt2adap.context_to_flat_prediction_tensor("I")
             # k = pred_shape.view(-1) / 297
             ranked_predictions = ranked_predictions.to(target_device)
 

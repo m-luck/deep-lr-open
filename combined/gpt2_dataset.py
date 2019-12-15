@@ -142,6 +142,7 @@ class GridDataset(Dataset):
                 "text_tensor": torch.LongTensor(text_tensor),
                 "text_length": text_length,
                 "text_str": record["text"],
+                "prev_words": record["prev_words"]
                 }
 
     def _cache_in_ram(self, speaker_number: int, sentence_id: str, start_frame: int, end_frame: int):
