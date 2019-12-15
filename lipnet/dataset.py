@@ -79,7 +79,7 @@ class GridDataset(Dataset):
                         prev_words.append(word)
                         self.data.append(record)
                         if self.cache_in_ram:
-                            self._cache_in_ram(speaker, sentence_id, start_frame, end_frame)
+                            self._cache_in_ram(speaker, sentence_id)
                 if self.input_type == InputType.BOTH or self.input_type == InputType.SENTENCES:
                     words = []
                     min_start_frame = 10000
@@ -102,7 +102,7 @@ class GridDataset(Dataset):
                     }
                     self.data.append(record)
                     if self.cache_in_ram:
-                        self._cache_in_ram(speaker, sentence_id, min_start_frame, max_end_frame)
+                        self._cache_in_ram(speaker, sentence_id)
 
             progress_bar.update(i)
 
@@ -141,7 +141,7 @@ class GridDataset(Dataset):
                 "text_str": record["text"],
                 }
 
-    def _cache_in_ram(self, speaker_number: int, sentence_id: str, start_frame: int, end_frame: int):
+    def _cache_in_ram(self, speaker_number: int, sentence_id: str):
         images = self._load_mouth_images(self.base_dir, speaker_number, sentence_id)
         key = GridDataset._get_image_cache_key(speaker_number, sentence_id)
         self.images_cache[key] = images
