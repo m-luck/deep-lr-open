@@ -107,3 +107,4 @@ venv.bak/
 *lock
 grid/
 .vscode/
+new_gpt2/
