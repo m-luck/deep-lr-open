@@ -13,7 +13,7 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Download and unpack the GRID Corpus')
+    parser = argparse.ArgumentParser(description='Train lipnet')
     parser.add_argument('--base_dir', type=str, required=True,
                         help='Base directory to the project data folder')
     parser.add_argument('--test_overlapped', required=False, default=False, action='store_true',
