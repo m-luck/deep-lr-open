@@ -13,11 +13,11 @@ from utils import zones, progressbar_utils
 
 
 def run(base_dir: str, use_overlapped: bool, batch_size: int, num_workers: int, target_device: device,
-        temporal_aug: float, cache_in_ram: bool):
-    train_dataset = GridDataset(base_dir, is_training=True, is_overlapped=use_overlapped, input_type=InputType.SENTENCES,
+        temporal_aug: float, cache_in_ram: bool, input_type: InputType):
+    train_dataset = GridDataset(base_dir, is_training=True, is_overlapped=use_overlapped, input_type=input_type,
                                 temporal_aug=temporal_aug, cache_in_ram=cache_in_ram)
-    val_dataset = GridDataset(base_dir, is_training=False, is_overlapped=use_overlapped, input_type=InputType.SENTENCES,
-                              temporal_aug=temporal_aug, cache_in_ram=cache_in_ram)
+    val_dataset = GridDataset(base_dir, is_training=False, is_overlapped=use_overlapped, input_type=input_type,
+                              temporal_aug=temporal_aug, cache_in_ram=False)
 
     loss_fn = nn.CTCLoss(blank=GridDataset.LETTERS.index(' '), reduction='mean', zero_infinity=True).to(target_device)
 
@@ -37,9 +37,9 @@ def run(base_dir: str, use_overlapped: bool, batch_size: int, num_workers: int, 
             optimizer,
             target_device)
         start_epoch = last_epoch + 1
-        if start_epoch >= 200:
-            for param_group in optimizer.param_groups:
-                param_group['lr'] = 2e-5
+        # if start_epoch >= 200:
+        #     for param_group in optimizer.param_groups:
+        #         param_group['lr'] = 2e-5
 
     train(model, train_dataset, val_dataset, optimizer, loss_fn, batch_size, num_workers, target_device, start_epoch,
           train_losses,
