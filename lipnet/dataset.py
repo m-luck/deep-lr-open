@@ -131,14 +131,12 @@ class GridDataset(Dataset):
         text_length = text_tensor.shape[0]  # get length before padding
         text_tensor = self._pad_array(text_tensor, GridDataset.TARGET_TEXT_LENGTH)
 
-        # spoken_words = " ".join(record["prev_words"])
-        # gpt2_words = np.zeros(0)  # get gpt2 output
-
         return {"images_tensor": torch.FloatTensor(images.transpose(3, 0, 1, 2)),
                 "images_length": images_length,
                 "text_tensor": torch.LongTensor(text_tensor),
                 "text_length": text_length,
                 "text_str": record["text"],
+		"prev_words": record["prev_words"]
                 }
 
     def _cache_in_ram(self, speaker_number: int, sentence_id: str):

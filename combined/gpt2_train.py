@@ -7,7 +7,7 @@ from torch import device
 from torch import nn, optim
 from torch.optim.optimizer import Optimizer
 
-from combined.gpt2_dataset import GridDataset, InputType
+from lipnet.dataset import GridDataset, InputType
 from combined.gpt2_model import LipNet
 from utils import zones, progressbar_utils
 
@@ -47,6 +47,8 @@ def run(base_dir: str, use_overlapped: bool, batch_size: int, num_workers: int, 
           val_losses, train_cers, val_cers, train_wers, val_wers)
 
 
+ranked_predictions_cache = {}
+
 def validate(model: LipNet, val_dataset: GridDataset, loss_fn: nn.CTCLoss, batch_size: int,
              num_workers: int, target_device: torch.device):
     with torch.no_grad():
@@ -61,13 +63,43 @@ def validate(model: LipNet, val_dataset: GridDataset, loss_fn: nn.CTCLoss, batch
         batch_losses = []
 
         preds_and_actuals = None
+
+        gpt2adap = GPT2_Adapter(cuda_avail=True, verbose=False)
+        dummy_pred =  gpt2adap.context_to_flat_prediction_tensor("lip net")[0].tolist()
+
         for (i, record) in enumerate(val_loader):
             images_tensor = record['images_tensor'].to(target_device)
             text_tensor = record['text_tensor'].to(target_device)
             images_length = record['images_length'].to(target_device)
             text_length = record['text_length'].to(target_device)
 
-            logits = model(images_tensor)
+            prev_words = record['prev_words']
+            
+            ranked_predictions = None
+
+            with open('log', "a+") as l: l.write('prev word' + str(prev_words) + "\n")
+            if prev_words: 
+                temp = []
+                zipped_words = zip(*prev_words)
+                for words in zipped_words:
+                    key =  ' '.join(words[-3:])
+                    with open('log', "a+") as l: l.write('key' + str(key) + "\n")
+                    if key not in ranked_predictions_cache:
+                        res = gpt2adap.context_to_flat_prediction_tensor(key)[0].tolist()
+                        print(res)
+                        temp.append(res)
+                        ranked_predictions_cache[key] = res
+                    else:
+                        res = ranked_prediction_cache[key]
+                        temp.append(res)
+                ranked_predictions = temp
+            else:
+                ranked_predictions = [dummy_pred] * len(text_length)
+            
+            # k = pred_shape.view(-1) / 297
+            ranked_predictions = torch.FloatTensor(ranked_predictions).to(target_device)
+
+            logits = model(images_tensor, ranked_predictions)
 
             loss = loss_fn(logits.transpose(0, 1).log_softmax(-1), text_tensor, images_length.view(-1),
                            text_length.view(-1))
@@ -78,7 +110,7 @@ def validate(model: LipNet, val_dataset: GridDataset, loss_fn: nn.CTCLoss, batch
             pred_text = ctc_decode(logits.cpu().numpy(), actual_text, images_length.cpu().numpy())
 
             cers = GridDataset.cer(pred_text, actual_text)
-            batch_cers.append(np.mean(cers))
+            batch_cers.append(np.mean(cers) if cers else 0.1337)
 
             _add_batch_wer_to_metrics(batch_wers=batch_wers, batch_pred_text=pred_text, batch_actual_text=actual_text)
 
@@ -90,9 +122,9 @@ def validate(model: LipNet, val_dataset: GridDataset, loss_fn: nn.CTCLoss, batch
 
         progress_bar.finish()
 
-        epoch_loss = np.mean(batch_losses)
-        epoch_cer = np.mean(batch_cers)
-        epoch_wer = np.mean(batch_wers)
+        epoch_loss = np.mean(batch_losses) if batch_losses else 0.1337
+        epoch_cer = np.mean(batch_cers) if batch_cers else 0.1337
+        epoch_wer = np.mean(batch_wers) if batch_wers else 0.1337
 
         for p, a in preds_and_actuals:
             print("pred: {}, actual: {}".format(p, a))
@@ -112,8 +144,6 @@ def train(model: LipNet, train_dataset: GridDataset, val_dataset: GridDataset, o
 
     gpt2adap = GPT2_Adapter(cuda_avail=True, verbose=False)
     dummy_pred =  gpt2adap.context_to_flat_prediction_tensor("lip net")[0].tolist()
-    ranked_predictions_cache = {}
-
 
     for epoch in range(start_epoch, start_epoch + 10):
         print("Starting epoch {} out of {}".format(epoch,start_epoch + 100))
@@ -123,7 +153,7 @@ def train(model: LipNet, train_dataset: GridDataset, val_dataset: GridDataset, o
         batch_losses = []
         batch_cers = []
         batch_wers = []
-
+	
         for (i, record) in enumerate(loader):
             model.train()
             images_tensor = record['images_tensor'].to(target_device)
@@ -151,7 +181,7 @@ def train(model: LipNet, train_dataset: GridDataset, val_dataset: GridDataset, o
                         temp.append(res)
                 ranked_predictions = temp
             else:
-                ranked_predictions = [dummy_pred] * batch_size 
+                ranked_predictions = [dummy_pred] * len(text_length)
             
             # k = pred_shape.view(-1) / 297
             ranked_predictions = torch.FloatTensor(ranked_predictions).to(target_device)
@@ -169,7 +199,6 @@ def train(model: LipNet, train_dataset: GridDataset, val_dataset: GridDataset, o
             optimizer.step()
 
             actual_text = record["text_str"]
-            print(actual_text)
             pred_text = ctc_decode(logits.detach().cpu().numpy(), actual_text, images_length.cpu().numpy())
 
             cers = GridDataset.cer(pred_text, actual_text)
