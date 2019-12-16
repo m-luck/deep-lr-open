@@ -80,8 +80,10 @@ class LipNet(torch.nn.Module):
         y = self.FCg(ranked_predictions)
         print("y gp output", y.size())
 
+
         x = self.FC(x)
-        x = x.permute(1, 0, 2).contiguous()
+        xy = torch.cat((x, y))
+        x = xy.permute(1, 0, 2).contiguous()
 
         return x
 
