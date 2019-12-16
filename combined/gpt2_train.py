@@ -109,27 +109,51 @@ def train(model: LipNet, train_dataset: GridDataset, val_dataset: GridDataset, o
     loader = train_dataset.get_data_loader(batch_size, num_workers, shuffle=True)
 
     best_val_loss = float('inf') if len(val_losses) == 0 else min(val_losses)
-    gpt2adap = GPT2_Adapter(cuda_avail=True, verbose=True)
 
-    for epoch in range(start_epoch, start_epoch + 100):
-        print("Starting epoch {} out of {}".format(epoch, start_epoch + 100))
+    gpt2adap = GPT2_Adapter(cuda_avail=True, verbose=False)
+    dummy_pred =  gpt2adap.context_to_flat_prediction_tensor("lip net")[0].tolist()
+    ranked_predictions_cache = {}
+
+
+    for epoch in range(start_epoch, start_epoch + 10):
+        print("Starting epoch {} out of {}".format(epoch,start_epoch + 100))
+
         progress_bar = progressbar_utils.get_adaptive_progressbar(len(loader)).start()
 
         batch_losses = []
         batch_cers = []
         batch_wers = []
+
         for (i, record) in enumerate(loader):
             model.train()
             images_tensor = record['images_tensor'].to(target_device)
             text_tensor = record['text_tensor'].to(target_device)
             images_length = record['images_length'].to(target_device)
             text_length = record['text_length'].to(target_device)
+            prev_words = record['prev_words']
+            
+            ranked_predictions = None
 
-            print(record['prev_words'])
-            prev_words = ' '.join(record['prev_words'])
-            ranked_predictions, pred_shape = gpt2adap.context_to_flat_prediction_tensor(prev_words) if prev_words else gpt2adap.context_to_flat_prediction_tensor("I")
+            with open('log', "a+") as l: l.write('prev words' + str(prev_words))
+            if prev_words: 
+                temp = []
+                for words in prev_words:
+                    key =  ' '.join(words[-3:])
+                    with open('log', "a+") as l: l.write('key' + str(key))
+                    if key not in ranked_predictions_dict:
+                        res = gpt2adap.context_to_flat_prediction_tensor(key)[0].tolist()
+                        print(res)
+                        temp.append(res)
+                        ranked_predictions_dict[key] = res
+                    else:
+                        res = ranked_prediction_dict[key]
+                        temp.append(res)
+                ranked_predictions = temp
+            else:
+                ranked_predictions = [dummy_pred] * batch_size 
+            
             # k = pred_shape.view(-1) / 297
-            ranked_predictions = ranked_predictions.to(target_device)
+            ranked_predictions = torch.FloatTensor(ranked_predictions).to(target_device)
 
             optimizer.zero_grad()
 
@@ -144,6 +168,7 @@ def train(model: LipNet, train_dataset: GridDataset, val_dataset: GridDataset, o
             optimizer.step()
 
             actual_text = record["text_str"]
+            print(actual_text)
             pred_text = ctc_decode(logits.detach().cpu().numpy(), actual_text, images_length.cpu().numpy())
 
             cers = GridDataset.cer(pred_text, actual_text)

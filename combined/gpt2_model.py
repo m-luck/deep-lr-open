@@ -27,8 +27,15 @@ class LipNet(torch.nn.Module):
         self.gru1 = nn.GRU(96 * 4 * 8, 256, 1, bidirectional=True)
         self.gru2 = nn.GRU(512, 256, 1, bidirectional=True)
 
-        # self.FC = nn.Linear(184320 + (297 * 5), 27 + 1) # Flattened output plus pred tensor (297 * k)
         self.FC = nn.Linear(512, 27 + 1)
+
+        self.FCg = nn.Linear(1485, 28)
+
+        # self.FC1 = nn.Linear((1895885 - (295 * 5)) + (297 * 5), 28 * 46 * 16) # Flattened output plus pred tensor (297 * k)
+        # self.FC1 = nn.Linear(512, 28)
+        # self.FC2 = nn.Linear(28, 46)
+        # self.FC3 = nn.Linear(46, 28)
+
         self.dropout_p = dropout_p
 
         self.relu = nn.ReLU(inplace=True)
@@ -36,35 +43,9 @@ class LipNet(torch.nn.Module):
         self.dropout3d = nn.Dropout3d(self.dropout_p)
         self._init()
 
-    def _init(self):
+    def forward(self, x, ranked_predictions: list):
 
-        init.kaiming_normal_(self.conv1.weight, nonlinearity='relu')
-        init.constant_(self.conv1.bias, 0)
-
-        init.kaiming_normal_(self.conv2.weight, nonlinearity='relu')
-        init.constant_(self.conv2.bias, 0)
-
-        init.kaiming_normal_(self.conv3.weight, nonlinearity='relu')
-        init.constant_(self.conv3.bias, 0)
-
-        init.kaiming_normal_(self.FC.weight, nonlinearity='sigmoid')
-        init.constant_(self.FC.bias, 0)
-
-        for m in (self.gru1, self.gru2):
-            stdv = math.sqrt(2 / (96 * 3 * 6 + 256))
-            for i in range(0, 256 * 3, 256):
-                init.uniform_(m.weight_ih_l0[i: i + 256],
-                              -math.sqrt(3) * stdv, math.sqrt(3) * stdv)
-                init.orthogonal_(m.weight_hh_l0[i: i + 256])
-                init.constant_(m.bias_ih_l0[i: i + 256], 0)
-                init.uniform_(m.weight_ih_l0_reverse[i: i + 256],
-                              -math.sqrt(3) * stdv, math.sqrt(3) * stdv)
-                init.orthogonal_(m.weight_hh_l0_reverse[i: i + 256])
-                init.constant_(m.bias_ih_l0_reverse[i: i + 256], 0)
-
-    def forward(self, x, ranked_predictions):
-
-        ranked_predictions = ranked_predictions.type(torch.cuda.FloatTensor)
+        print(ranked_predictions.size())
 
         x = self.conv1(x)
         x = self.relu(x)
@@ -93,17 +74,43 @@ class LipNet(torch.nn.Module):
         x = self.dropout(x)
         x, h = self.gru2(x)
         x = self.dropout(x)
+	
+        print("x", x.size())
 
-        x_plus_pred = torch.cat([x.view(-1), ranked_predictions])
-        print(x_plus_pred.size())
-        x = self.FC(x_plus_pred)
-        # x = self.FC(x)
-        print(x.size())
+        y = self.FCg(ranked_predictions)
+        print("y gp output", y.size())
 
-        # Expects dims 45, 16, 28
-        x = x.view(45, 16, 28)
+        x = self.FC(x)
         x = x.permute(1, 0, 2).contiguous()
+
         return x
+
+    def _init(self):
+
+        init.kaiming_normal_(self.conv1.weight, nonlinearity='relu')
+        init.constant_(self.conv1.bias, 0)
+
+        init.kaiming_normal_(self.conv2.weight, nonlinearity='relu')
+        init.constant_(self.conv2.bias, 0)
+
+        init.kaiming_normal_(self.conv3.weight, nonlinearity='relu')
+        init.constant_(self.conv3.bias, 0)
+
+        init.kaiming_normal_(self.FC.weight, nonlinearity='sigmoid')
+        init.constant_(self.FC.bias, 0)
+
+        for m in (self.gru1, self.gru2):
+            stdv = math.sqrt(2 / (96 * 3 * 6 + 256))
+            for i in range(0, 256 * 3, 256):
+                init.uniform_(m.weight_ih_l0[i: i + 256],
+                              -math.sqrt(3) * stdv, math.sqrt(3) * stdv)
+                init.orthogonal_(m.weight_hh_l0[i: i + 256])
+                init.constant_(m.bias_ih_l0[i: i + 256], 0)
+                init.uniform_(m.weight_ih_l0_reverse[i: i + 256],
+                              -math.sqrt(3) * stdv, math.sqrt(3) * stdv)
+                init.orthogonal_(m.weight_hh_l0_reverse[i: i + 256])
+                init.constant_(m.bias_ih_l0_reverse[i: i + 256], 0)
+
 
     def save(self, epoch: int, optimizer: Optimizer, train_epoch_losses: List[float],
              val_epoch_losses: List[float], train_epoch_cers: List[float], val_epoch_cers: List[float]):

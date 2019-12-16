@@ -1,0 +1,9 @@
+Traceback (most recent call last):
+  File "gpt2train.py", line 5, in <module>
+    from combined.gpt2_train import run
+  File "/scratch/mll469/gpt2deeplr/combined/gpt2_train.py", line 11, in <module>
+    from combined.gpt2_model import LipNet
+  File "/scratch/mll469/gpt2deeplr/combined/gpt2_model.py", line 81
+    y = self.FCl(ranked_predictions)
+                                   ^
+TabError: inconsistent use of tabs and spaces in indentation
