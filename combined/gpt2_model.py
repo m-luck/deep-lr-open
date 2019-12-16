@@ -117,7 +117,8 @@ class LipNet(torch.nn.Module):
 
 
     def save(self, epoch: int, optimizer: Optimizer, train_epoch_losses: List[float],
-             val_epoch_losses: List[float], train_epoch_cers: List[float], val_epoch_cers: List[float]):
+             val_epoch_losses: List[float], train_epoch_cers: List[float], val_epoch_cers: List[float],
+             train_epoch_wers: List[float], val_epoch_wers: List[float]):
 
         file_path = zones.get_model_file_path(self.base_dir, epoch)
 
@@ -129,10 +130,12 @@ class LipNet(torch.nn.Module):
             'val_epoch_losses': val_epoch_losses,
             'train_epoch_cers': train_epoch_cers,
             'val_epoch_cers': val_epoch_cers,
+            'train_epoch_wers': train_epoch_wers,
+            'val_epoch_wers': val_epoch_wers,
         }, file_path)
 
     def load_existing_model_checkpoint(self, optimizer: Optimizer, target_device: torch.device) -> Tuple[
-        int, List[float], List[float], List[float], List[float]]:
+        int, List[float], List[float], List[float], List[float], List[float], List[float]]:
 
         file_path = zones.get_model_latest_file_path(self.base_dir)
         if file_path is None or not os.path.isfile(file_path):
@@ -151,4 +154,5 @@ class LipNet(torch.nn.Module):
         self.to(target_device)
 
         return checkpoint['epoch'], checkpoint["train_epoch_losses"], checkpoint["val_epoch_losses"], checkpoint[
-            "train_epoch_cers"], checkpoint["val_epoch_cers"]
+            "train_epoch_cers"], checkpoint["val_epoch_cers"], checkpoint[
+                   "train_epoch_wers"], checkpoint["val_epoch_wers"]
