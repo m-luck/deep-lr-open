@@ -75,13 +75,15 @@ class LipNet(torch.nn.Module):
         x, h = self.gru2(x)
         x = self.dropout(x)
 	
-        print("x", x.size())
 
         y = self.FCg(ranked_predictions)
+        y = y.unsqueeze(0)
         print("y gp output", y.size())
 
 
         x = self.FC(x)
+        print("x to cat", x.size())
+        
         xy = torch.cat((x, y))
         x = xy.permute(1, 0, 2).contiguous()
 

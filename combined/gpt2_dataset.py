@@ -48,7 +48,7 @@ class GridDataset(Dataset):
         progress_bar = progressbar_utils.get_adaptive_progressbar(len(self.speakers_dict.values())).start()
 
         for i, speaker_key in enumerate(self.speakers_dict):
-            if speaker_key != 's_24':
+            if speaker_key != 's_24' and i < 5:
                 speaker = self._get_speaker_number_from_key(speaker_key)
                 for sentence_id in self.speakers_dict[speaker_key]:
 

@@ -134,19 +134,20 @@ def train(model: LipNet, train_dataset: GridDataset, val_dataset: GridDataset, o
             
             ranked_predictions = None
 
-            with open('log', "a+") as l: l.write('prev words' + str(prev_words))
+            with open('log', "a+") as l: l.write('prev word' + str(prev_words) + "\n")
             if prev_words: 
                 temp = []
-                for words in prev_words:
+                zipped_words = zip(*prev_words)
+                for words in zipped_words:
                     key =  ' '.join(words[-3:])
-                    with open('log', "a+") as l: l.write('key' + str(key))
-                    if key not in ranked_predictions_dict:
+                    with open('log', "a+") as l: l.write('key' + str(key) + "\n")
+                    if key not in ranked_predictions_cache:
                         res = gpt2adap.context_to_flat_prediction_tensor(key)[0].tolist()
                         print(res)
                         temp.append(res)
-                        ranked_predictions_dict[key] = res
+                        ranked_predictions_cache[key] = res
                     else:
-                        res = ranked_prediction_dict[key]
+                        res = ranked_prediction_cache[key]
                         temp.append(res)
                 ranked_predictions = temp
             else:
