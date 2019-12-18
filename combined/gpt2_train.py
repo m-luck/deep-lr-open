@@ -210,9 +210,8 @@ def ctc_decode(y: np.ndarray, actual_text: List[str], images_length: np.ndarray)
 
     result = []
     for i in range(y.shape[0]):
-        is_sentence = True if ' ' in actual_text[i] else False
         target_length = images_length[i]
-        text = GridDataset.convert_ctc_array_to_text(y[i], target_length, is_sentence)
+        text = GridDataset.convert_ctc_array_to_text(y[i], target_length)
         result.append(text)
     return result
 
