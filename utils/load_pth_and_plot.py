@@ -3,7 +3,6 @@ import os
 
 import matplotlib.pyplot as plt
 import torch
-from matplotlib import ticker
 
 from utils import zones
 
@@ -23,6 +22,7 @@ def run(base_dir: str, name: str, is_sentences: bool):
     val_epoch_wers = checkpoint["val_epoch_wers"]
 
     num_epochs = len(train_epoch_losses)
+    print("num epochs {}".format(num_epochs))
     xs = list(range(num_epochs))
 
     plt.plot(xs, train_epoch_losses, label="Train Loss")
