@@ -19,7 +19,7 @@ def run(base_dir: str, use_overlapped: bool, batch_size: int, num_workers: int, 
     val_dataset = GridDataset(base_dir, is_training=False, is_overlapped=use_overlapped, input_type=input_type,
                               temporal_aug=temporal_aug, cache_in_ram=False)
 
-    loss_fn = nn.CTCLoss(blank=GridDataset.LETTERS.index(' '), reduction='mean', zero_infinity=True).to(target_device)
+    loss_fn = nn.CTCLoss(blank=GridDataset.LETTERS.index('-'), reduction='mean', zero_infinity=True).to(target_device)
 
     model: LipNet = LipNet(base_dir)
     model.to(target_device)
@@ -181,9 +181,8 @@ def ctc_decode(y: np.ndarray, actual_text: List[str], images_length: np.ndarray)
 
     result = []
     for i in range(y.shape[0]):
-        is_sentence = True if ' ' in actual_text[i] else False
         target_length = images_length[i]
-        text = GridDataset.convert_ctc_array_to_text(y[i], target_length, is_sentence)
+        text = GridDataset.convert_ctc_array_to_text(y[i], target_length)
         result.append(text)
     return result
 

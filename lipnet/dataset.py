@@ -22,8 +22,8 @@ class InputType(Enum):
 
 
 class GridDataset(Dataset):
-    LETTERS = [' ', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
-               'U', 'V', 'W', 'X', 'Y', 'Z']
+    LETTERS = ['-', ' ', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S',
+               'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
     TARGET_TEXT_LENGTH = 31
     TARGET_IMAGES_LENGTH = 74
 
@@ -182,7 +182,7 @@ class GridDataset(Dataset):
         return images
 
     @staticmethod
-    def convert_ctc_array_to_text(array: np.ndarray, target_length: int, is_sentence: bool) -> str:
+    def convert_ctc_array_to_text(array: np.ndarray, target_length: int) -> str:
         array = array[:target_length]
 
         prev_index = -1
@@ -190,12 +190,9 @@ class GridDataset(Dataset):
         for n in array:
             if n < 0 or n >= len(GridDataset.LETTERS) or n == prev_index:
                 continue
-            if is_sentence:
-                text.append(GridDataset.LETTERS[n])
-            elif not GridDataset.LETTERS[n] == ' ':  # don't add spaces for word-level inputs
-                text.append(GridDataset.LETTERS[n])
+            text.append(GridDataset.LETTERS[n])
             prev_index = n
-        return ''.join(text).strip()
+        return ''.join(text).replace('-', '').strip()
 
     @staticmethod
     def convert_array_to_text(array: np.ndarray) -> str:
@@ -219,17 +216,14 @@ class GridDataset(Dataset):
         """
         cers = []
         for p, t in zip(predict, truth):
-            p = p.replace(" ", "").upper()
-            t = t.replace(" ", "").upper()
+            p = p.replace("-", "").upper()
+            t = t.replace("-", "").upper()
             cer = 1.0 * editdistance.eval(p, t) / len(t)
             cers.append(cer)
         return cers
 
     @staticmethod
     def wer(predict: List[str], truth: List[str]):
-        """ Unfortunately no way to differentiate between blanks within words (which should be acceptable) and
-            blanks between words
-        """
         sentence_pairs = [(p[0].upper().split(' '), p[1].upper().split(' ')) for p in zip(predict, truth)]
         #  edit distance lib does WER on lists
         wer = [1.0 * editdistance.eval(s[0], s[1]) / len(s[1]) for s in sentence_pairs]  # s is a List[str]
