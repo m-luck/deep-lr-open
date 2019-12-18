@@ -76,6 +76,17 @@ def get_cache_dir(base_dir: str) -> str:
     return os.path.join(base_dir, "grid", "cache")
 
 
+def get_plot_dir(base_dir: str) -> str:
+    resources_dir = get_resource_dir(base_dir)
+    return os.path.join(resources_dir, "plots")
+
+
+def get_plot_path(base_dir: str, name: str) -> str:
+    plot_dir = get_plot_dir(base_dir)
+    os.makedirs(plot_dir, exist_ok=True)
+    return os.path.join(plot_dir, name)
+
+
 def get_model_dir(base_dir: str) -> str:
     resources_dir = get_resource_dir(base_dir)
     return os.path.join(resources_dir, "models")
