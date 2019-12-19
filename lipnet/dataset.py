@@ -117,7 +117,7 @@ class GridDataset(Dataset):
         record = self.data[idx]
 
         if self.cache_in_ram:
-            key = GridDataset._get_image_cache_key(int(record["speaker"]),  record["sentence_id"])
+            key = GridDataset._get_image_cache_key(int(record["speaker"]), record["sentence_id"])
             images = self.images_cache[key]
         else:
             images = self._load_mouth_images(self.base_dir, record["speaker"], record["sentence_id"])
@@ -136,7 +136,7 @@ class GridDataset(Dataset):
                 "text_tensor": torch.LongTensor(text_tensor),
                 "text_length": text_length,
                 "text_str": record["text"],
-		"prev_words": record["prev_words"]
+                "prev_words": record["prev_words"]
                 }
 
     def _cache_in_ram(self, speaker_number: int, sentence_id: str):

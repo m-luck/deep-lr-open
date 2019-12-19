@@ -9,6 +9,7 @@ from torch.optim.optimizer import Optimizer
 
 from utils import zones
 
+
 class LipNet(torch.nn.Module):
     def __init__(self, base_dir: str, dropout_p=0.5):
         super(LipNet, self).__init__()
@@ -74,16 +75,14 @@ class LipNet(torch.nn.Module):
         x = self.dropout(x)
         x, h = self.gru2(x)
         x = self.dropout(x)
-	
 
         y = self.FCg(ranked_predictions)
         y = y.unsqueeze(0)
         print("y gp output", y.size())
 
-
         x = self.FC(x)
         print("x to cat", x.size())
-        
+
         xy = torch.cat((x, y))
         x = xy.permute(1, 0, 2).contiguous()
 
@@ -114,7 +113,6 @@ class LipNet(torch.nn.Module):
                               -math.sqrt(3) * stdv, math.sqrt(3) * stdv)
                 init.orthogonal_(m.weight_hh_l0_reverse[i: i + 256])
                 init.constant_(m.bias_ih_l0_reverse[i: i + 256], 0)
-
 
     def save(self, epoch: int, optimizer: Optimizer, train_epoch_losses: List[float],
              val_epoch_losses: List[float], train_epoch_cers: List[float], val_epoch_cers: List[float],

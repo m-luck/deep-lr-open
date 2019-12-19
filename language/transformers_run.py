@@ -14,6 +14,8 @@ input_tensor, tensor_shape = gpt_adap.context_to_nd_prediction_tensor(word_list,
 ...
 
 """
+
+
 class GPT2_Adapter():
 
     def __init__(self, cuda_avail=False, verbose=False):
@@ -25,13 +27,13 @@ class GPT2_Adapter():
         """
         Returns flattened tensor of k_next one-hotted prediction words and its shape (a tuple).
         """
-        return self.context_to_prediction_tensor(context, self.lists_to_flat_tensor, k_next)   
+        return self.context_to_prediction_tensor(context, self.lists_to_flat_tensor, k_next)
 
     def context_to_nd_prediction_tensor(self, context, k_next=5):
         """
         Returns flattened tensor of k_next one-hotted prediction words and its shape (a tuple).
         """
-        return self.context_to_prediction_tensor(context, lambda x: torch.from_numpy(np.array(x)), k_next)   
+        return self.context_to_prediction_tensor(context, lambda x: torch.from_numpy(np.array(x)), k_next)
 
     def context_to_prediction_tensor(self, context, shape_manipulator, k_next=5):
         """
@@ -41,10 +43,11 @@ class GPT2_Adapter():
         pred = self.get_prediction(context)
         words = self.get_top_k_next_words(k_next, pred)
         one_hotted = [self.word_to_one_hot(word) for word in words]
-        tensor = shape_manipulator(one_hotted) # Replace input to this line for more robust tensor information such as nd embeddings. Original is one-hot.
-        return tensor, tensor.size()   
+        tensor = shape_manipulator(
+            one_hotted)  # Replace input to this line for more robust tensor information such as nd embeddings. Original is one-hot.
+        return tensor, tensor.size()
 
-    def get_prediction(self, leading_text:str, num_tokens_predict=1):
+    def get_prediction(self, leading_text: str, num_tokens_predict=1):
         """
         Take a set of words, return the latest predicted word and its tokenized index.
         """
@@ -72,7 +75,7 @@ class GPT2_Adapter():
         model.eval()
 
         # CUDA options
-        if self.cuda_on: 
+        if self.cuda_on:
             tokens_tensor = tokens_tensor.to('cuda')
             model.to('cuda')
 
@@ -80,46 +83,46 @@ class GPT2_Adapter():
         with torch.no_grad():
             outputs = model(tokens_tensor)
             predictions = outputs[0]
-            
+
         return predictions
-        
+
     # def max_len(): # Get max length of a list of words
-        # max_len = 0
-        # max_word = None
-        # for i, word_token in enumerate(predictions.tolist()[0][0]): 
-        #     word = tokenizer.decode(i)
-        #     if len(word) > max_len:
-        #         max_len = len(word)
-        #         max_word = word
-        #         print(word)
-        # print(max_len, max_word)
-        # print(len(predictions.tolist()[0][0]))
-        # MAX_LEN:11:'information' * 5 * 28 * 2  
+    # max_len = 0
+    # max_word = None
+    # for i, word_token in enumerate(predictions.tolist()[0][0]):
+    #     word = tokenizer.decode(i)
+    #     if len(word) > max_len:
+    #         max_len = len(word)
+    #         max_word = word
+    #         print(word)
+    # print(max_len, max_word)
+    # print(len(predictions.tolist()[0][0]))
+    # MAX_LEN:11:'information' * 5 * 28 * 2
 
     def word_to_one_hot(self, word):
         # len 27
-        chars = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 
-                'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '-', '*']
-        
+        chars = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
+                 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '-', '*']
+
         word = word.strip()
-        if len(word) < 11: 
+        if len(word) < 11:
             l_text = list(word)
             for i in range(11 - len(word)):
                 l_text.append('*')
             word = ''.join(l_text)
-        predicted_vector = [ [1 if chars[i] == c else 0 for i in range(27)] for c in word]
-        if self.verbose: 
+        predicted_vector = [[1 if chars[i] == c else 0 for i in range(27)] for c in word]
+        if self.verbose:
             [print(i, row) for i, row in enumerate(predicted_vector)]
             print(word)
         return predicted_vector
 
     def get_top_k_next_words(self, k, predictions):
-        val_ind_tuples = [(-pred.item(), i) for i, pred in enumerate(predictions[0,-1,:])]
+        val_ind_tuples = [(-pred.item(), i) for i, pred in enumerate(predictions[0, -1, :])]
         heapq.heapify(val_ind_tuples)
         res = []
         # get the predicted next sub-word 
         tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
-        for index in range(0,k):
+        for index in range(0, k):
             predicted_index = heapq.heappop(val_ind_tuples)[1]
             # predicted_text = tokenizer.decode(indexed_tokens + [predicted_index])
             predicted_word = tokenizer.decode(predicted_index)
@@ -130,9 +133,9 @@ class GPT2_Adapter():
         res = torch.from_numpy(np.array(lists))
         return res.view(-1)
 
+
 if __name__ == "__main__":
     # Will print out flat prediction
     gpt2adap = GPT2_Adapter(cuda_avail=False, verbose=True)
     res, shape = gpt2adap.context_to_flat_prediction_tensor("The world is in a")
     print(res, shape)
-
