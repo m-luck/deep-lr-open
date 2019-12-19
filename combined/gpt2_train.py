@@ -90,7 +90,7 @@ def validate(model: LipNet, val_dataset: GridDataset, loss_fn: nn.CTCLoss, batch
                         temp.append(res)
                         ranked_predictions_cache[key] = res
                     else:
-                        res = ranked_prediction_cache[key]
+                        res = ranked_predictions_cache[key]
                         temp.append(res)
                 ranked_predictions = temp
             else:
