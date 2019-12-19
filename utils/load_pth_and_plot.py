@@ -34,6 +34,7 @@ def run(base_dir: str, name: str, is_sentences: bool):
 
     if is_sentences:
         plt.axvline(x=6, c="grey", label="Both->Sent.", linestyle="dashed")
+        plt.title("LipNet Sentence Level")
 
     plt.legend()
 

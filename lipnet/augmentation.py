@@ -26,7 +26,12 @@ def transform(images: List[Image], is_training: bool, temporal_aug: float):
 
     images = torch.stack(images)
 
-    # temporal jitter taken from https://github.com/sailordiary/LipNet-PyTorch/blob/master/augmentation.py#L79
+    """
+    temporal jitter taken from https://github.com/sailordiary/LipNet-PyTorch/blob/master/augmentation.py#L79
+    sailordiary/LipNet-PyTorch is licensed under the
+
+    BSD 3-Clause "New" or "Revised" License
+    """
     if is_training and temporal_aug > 0.0:
         length = images.size(0)
         output = images.clone()

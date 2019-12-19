@@ -9,6 +9,11 @@ from torch.optim.optimizer import Optimizer
 
 from utils import zones
 
+"""
+Modified from https://github.com/Fengdalu/LipNet-PyTorch
+The MIT License
+"""
+
 
 class LipNet(torch.nn.Module):
     def __init__(self, base_dir: str, dropout_p=0.5):
