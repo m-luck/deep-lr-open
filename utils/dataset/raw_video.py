@@ -23,7 +23,9 @@ def _get_video_frames(args, video_path):
 
 
 def _get_mouth_frames(frames, face_detector, face_predictor):
-    """modified from https://github.com/rizkiarm/LipNet/blob/master/lipnet/lipreading/videos.py"""
+    """modified from https://github.com/rizkiarm/LipNet/blob/master/lipnet/lipreading/videos.py
+       MIT License
+    """
     normalize_ratio = None
     mouth_frames = []
     for frame in frames:
